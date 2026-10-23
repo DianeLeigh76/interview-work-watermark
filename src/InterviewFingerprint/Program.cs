@@ -147,6 +147,7 @@ internal static class Program
 
     private static Int32 VerifyImage(SKBitmap image, Byte[] payload)
     {
+        var result = Watermark.Verify(image, payload);
         Console.WriteLine($"Matched bits: {result.MatchingBits}/{PayloadBits}");
         Console.WriteLine($"Average vote agreement: {result.Agreement:P1}");
         Console.WriteLine($"Weakest bit agreement: {result.Weakest:P1}");
