@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 
 namespace InterviewFingerprint.Classes;
 
@@ -22,7 +21,7 @@ internal static class Watermark
             Encoding.UTF8.GetBytes("InterviewFingerprint:v1:" + submissionId))[..8];
     }
 
-    public static void Mark(Image<Rgba32> image, Byte[] payload, Double strength)
+    public static void Mark(SKBitmap image, Byte[] payload, Double strength)
     {
         if (image.Width < Side || image.Height < Side)
         {
@@ -54,19 +53,19 @@ internal static class Watermark
             {
                 for (Int32 col = 0; col < Side; col++)
                 {
-                    Rgba32 original = image[x + col, y + row];
+                    SKColor original = image.GetPixel(x + col, y + row);
                     Double adjustment = changed[row, col] - pixels[row, col];
-                    image[x + col, y + row] = new Rgba32(
-                        Clamp(original.R + adjustment),
-                        Clamp(original.G + adjustment),
-                        Clamp(original.B + adjustment),
-                        original.A);
+                    image.SetPixel(x + col, y + row, new SKColor(
+                        Clamp(original.Red + adjustment),
+                        Clamp(original.Green + adjustment),
+                        Clamp(original.Blue + adjustment),
+                        original.Alpha));
                 }
             }
         }
     }
 
-    public static (Int32 MatchingBits, Double Agreement, Double Weakest) Verify(Image<Rgba32> image, Byte[] payload)
+    public static (Int32 MatchingBits, Double Agreement, Double Weakest) Verify(SKBitmap image, Byte[] payload)
     {
         Int32 columns = image.Width / Side;
         Int32 count = columns * (image.Height / Side);
@@ -114,15 +113,15 @@ internal static class Watermark
         return (matched, agreement / BitCount, weakest);
     }
 
-    private static Double[,] ReadLuma(Image<Rgba32> image, Int32 x, Int32 y)
+    private static Double[,] ReadLuma(SKBitmap image, Int32 x, Int32 y)
     {
         Double[,] result = new Double[Side, Side];
         for (Int32 row = 0; row < Side; row++)
         {
             for (Int32 col = 0; col < Side; col++)
             {
-                Rgba32 pixel = image[x + col, y + row];
-                result[row, col] = .2126 * pixel.R + .7152 * pixel.G + .0722 * pixel.B;
+                SKColor pixel = image.GetPixel(x + col, y + row);
+                result[row, col] = .2126 * pixel.Red + .7152 * pixel.Green + .0722 * pixel.Blue;
             }
         }
 
