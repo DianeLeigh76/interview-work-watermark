@@ -4,9 +4,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 namespace InterviewFingerprint;
 
@@ -34,10 +32,15 @@ internal static class Program
                     String id = Required(options, "id");
                     Double strength = GetStrength(options);
                     CheckDistinct(input, output);
-                    using var image = Image.Load<Rgba32>(input);
+                    using SKBitmap image = SKBitmap.Decode(input) ?? throw new InvalidDataException("Unable to decode input image.");
                     Watermark.Mark(image, Watermark.Payload(key, id), strength);
                     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
-                    image.SaveAsPng(output);
+                    using (SKImage marked = SKImage.FromBitmap(image))
+                    using (SKData encoded = marked.Encode(SKEncodedImageFormat.Png, 100))
+                    using (FileStream stream = File.Create(output))
+                    {
+                        encoded.SaveTo(stream);
+                    }
                     Console.WriteLine($"Marked PNG: {output}");
                     Console.WriteLine($"SHA-256: {HashFile(output)}");
                     Console.WriteLine("Keep the secret key private. Test verification on the delivered copy.");
@@ -45,28 +48,22 @@ internal static class Program
                 }
                 case "verify":
                 {
-                    using var image = Image.Load<Rgba32>(Required(options, "in"));
+                    using SKBitmap image = SKBitmap.Decode(Required(options, "in")) ?? throw new InvalidDataException("Unable to decode suspected image.");
                     Byte[] payload = Watermark.Payload(Secret(), Required(options, "id"));
                     if (options.TryGetValue("reference", out String? reference))
                     {
-                        using var referenceImage = Image.Load<Rgba32>(reference);
+                        using SKBitmap referenceImage = SKBitmap.Decode(reference) ?? throw new InvalidDataException("Unable to decode reference image.");
                         if ((Int64)image.Width * referenceImage.Height != (Int64)image.Height * referenceImage.Width)
                         {
                             throw new ArgumentException("Aspect ratio differs: this verifier cannot handle cropping or distortion.");
                         }
                         if (image.Width != referenceImage.Width || image.Height != referenceImage.Height)
                         {
-                            image.Mutate(x => x.Resize(referenceImage.Width, referenceImage.Height));
+                            using SKBitmap resized = image.Resize(new SKImageInfo(referenceImage.Width, referenceImage.Height), SKSamplingOptions.Default) ?? throw new InvalidOperationException("Unable to resize image.");
+                            return VerifyImage(resized, payload);
                         }
                     }
-                    var result = Watermark.Verify(image, payload);
-                    Console.WriteLine($"Matched bits: {result.MatchingBits}/{PayloadBits}");
-                    Console.WriteLine($"Average vote agreement: {result.Agreement:P1}");
-                    Console.WriteLine($"Weakest bit agreement: {result.Weakest:P1}");
-                    Boolean valid = result.MatchingBits == PayloadBits && result.Agreement >= .75 && result.Weakest >= .55;
-                    Console.WriteLine($"Result: {(valid ? "MATCH" : "NOT VERIFIED")}");
-                    Console.WriteLine("This is supporting evidence, not a forensic or copyright determination.");
-                    return valid ? 0 : 1;
+                    return VerifyImage(image, payload);
                 }
                 case "code-fingerprint":
                 {
@@ -146,6 +143,17 @@ internal static class Program
             Console.Error.WriteLine($"Error: {problem.Message}");
             return 2;
         }
+    }
+
+    private static Int32 VerifyImage(SKBitmap image, Byte[] payload)
+    {
+        Console.WriteLine($"Matched bits: {result.MatchingBits}/{PayloadBits}");
+        Console.WriteLine($"Average vote agreement: {result.Agreement:P1}");
+        Console.WriteLine($"Weakest bit agreement: {result.Weakest:P1}");
+        Boolean valid = result.MatchingBits == PayloadBits && result.Agreement >= .75 && result.Weakest >= .55;
+        Console.WriteLine($"Result: {(valid ? "MATCH" : "NOT VERIFIED")}");
+        Console.WriteLine("This is supporting evidence, not a forensic or copyright determination.");
+        return valid ? 0 : 1;
     }
 
     private static StringComparison PathComparison =>
