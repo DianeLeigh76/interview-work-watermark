@@ -27,3 +27,11 @@ Existing files predate these rules; refactor to this layout incrementally, keepi
 
 - Test changes, do not describe uncompiled source as validated.
 - Keep secrets, candidate materials and private evidence out of Git.
+
+## Braces and formatting
+
+- Use Allman brace style everywhere: every opening `{` and closing `}` must be on its own line, aligned with its associated declaration or statement.
+- This applies to namespaces, classes, structs, interfaces, enums, records, methods, constructors, properties, control-flow blocks, and initializer blocks where syntactically applicable.
+- Always use braces for `if`, `else`, `for`, `foreach`, `while`, and similar control-flow bodies, including single-statement bodies.
+- Do not use inline single-line blocks such as `if (condition) { DoWork(); }`.
+- Enforce these rules in code reviews and apply them while refactoring existing source.
