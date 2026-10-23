@@ -1,8 +1,9 @@
+using InterviewFingerprint.Records;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace InterviewFingerprint;
+namespace InterviewFingerprint.Classes;
 
 internal static class CodeAnalysis
 {
