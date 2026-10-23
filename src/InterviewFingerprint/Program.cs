@@ -1,3 +1,5 @@
+using InterviewFingerprint.Classes;
+using InterviewFingerprint.Records;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
