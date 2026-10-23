@@ -3,7 +3,7 @@ using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
-namespace InterviewFingerprint;
+namespace InterviewFingerprint.Classes;
 
 internal static class Watermark
 {
