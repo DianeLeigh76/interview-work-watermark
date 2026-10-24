@@ -48,6 +48,12 @@ For safety, provide secret keys through a restricted input mechanism in a future
 - This version provides no cryptographic signing of manifests; use an independent timestamp or signing solution to strengthen evidence.
 - This project does not automatically establish rights, copyright infringement, compensation owed, a fake job posting, or an employer's intent.
 
+## Synthetic watermark robustness diagnostics
+
+The Windows/Linux CI smoke-test job also generates a downloadable JSON artifact, `watermark-robustness.json`. It runs the keyed detector against **synthetic** gradient and noise images, including unmarked and wrong-ID controls, JPEG compression (quality 90 and 70), grayscale conversion, cropping and 75% resizing with the optional marked-image reference. The report includes matched bits, detection results and marked-image PSNR.
+
+These observations are **diagnostics, not proof of resilience or statistically valid error rates**. Synthetic images cannot estimate real-world false-positive or false-negative rates, and transformation failures do not necessarily fail CI. The existing untransformed PNG round-trip remains a required passing smoke test. CI artifacts contain no candidate submissions, private artwork or real secrets.
+
 ## Architecture / planned roadmap
 
 - **v0.1**: image transform + verifier + hash manifest (initial prototype).

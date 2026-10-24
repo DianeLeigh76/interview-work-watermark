@@ -29,5 +29,12 @@ jobs:
         run: dotnet restore InterviewFingerprint.slnx
       - name: Build
         run: dotnet build InterviewFingerprint.slnx --configuration Release --no-restore
-      - name: Run CLI smoke tests
-        run: dotnet run --project tests/InterviewFingerprint.SmokeTests --configuration Release --no-build -- src/InterviewFingerprint/bin/Release/net10.0/InterviewFingerprint.dll
+      - name: Run CLI smoke tests and synthetic watermark diagnostics
+        run: dotnet run --project tests/InterviewFingerprint.SmokeTests --configuration Release --no-build -- src/InterviewFingerprint/bin/Release/net10.0/InterviewFingerprint.dll --report artifacts/watermark-robustness.json
+      - name: Upload watermark diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: watermark-robustness-${{ matrix.os }}
+          path: artifacts/watermark-robustness.json
+          if-no-files-found: warn

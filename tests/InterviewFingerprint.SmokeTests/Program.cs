@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using InterviewFingerprint.SmokeTests.Classes;
 using SkiaSharp;
 
 namespace InterviewFingerprint.SmokeTests;
@@ -9,9 +10,10 @@ internal static class Program
 
     private static Int32 Main(String[] arguments)
     {
-        if (arguments.Length != 1)
+        if (arguments.Length != 1 &&
+            (arguments.Length != 3 || arguments[1] != "--report"))
         {
-            Console.Error.WriteLine("Usage: SmokeTests <path-to-InterviewFingerprint.dll>");
+            Console.Error.WriteLine("Usage: SmokeTests <path-to-InterviewFingerprint.dll> [--report path.json]");
             return 2;
         }
 
@@ -27,6 +29,11 @@ internal static class Program
         try
         {
             RunAll(application, folder);
+            if (arguments.Length == 3)
+            {
+                RobustnessMatrix.Run(application, folder, Path.GetFullPath(arguments[2]), TestSecret);
+            }
+
             Console.WriteLine("PASS: all CLI smoke tests");
             return 0;
         }
@@ -115,6 +122,15 @@ internal static class Program
             File.WriteAllText(linkManifest, manifestJsonForSize.Replace("submission.txt", "linked.txt", StringComparison.Ordinal));
             RequireExit(application, 2, "check-archive", "--in", evidence, "--manifest", linkManifest);
             File.Delete(linked);
+
+            String linkedParent = Path.Combine(folder, "linked-parent");
+            Directory.CreateSymbolicLink(linkedParent, evidence);
+            Directory.CreateDirectory(Path.Combine(evidence, "nested"));
+            String nestedThroughLink = Path.Combine(linkedParent, "nested");
+            RequireExit(application, 2, "archive", "--in", nestedThroughLink, "--out",
+                Path.Combine(folder, "linked-parent-archive.json"), "--id", "submission-one");
+            RequireExit(application, 2, "check-archive", "--in", nestedThroughLink, "--manifest", manifest);
+            Directory.Delete(linkedParent);
         }
 
         String maliciousManifest = Path.Combine(folder, "malicious-manifest.json");

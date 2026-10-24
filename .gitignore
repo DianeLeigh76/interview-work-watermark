@@ -6,3 +6,4 @@
 /evidence/
 /secrets/
 *.key
+/artifacts/

@@ -9,7 +9,7 @@ internal static class EvidenceFiles
     internal static IReadOnlyList<String> Enumerate(String root)
     {
         String fullRoot = Path.GetFullPath(root);
-        RejectLink(fullRoot);
+        RejectLinkedAncestors(fullRoot);
 
         List<String> files = new List<String>();
         Stack<String> pending = new Stack<String>();
@@ -69,7 +69,7 @@ internal static class EvidenceFiles
         }
 
         String current = fullRoot;
-        RejectLink(current);
+        RejectLinkedAncestors(current);
         foreach (String segment in withinRoot.Split(Path.DirectorySeparatorChar))
         {
             current = Path.Combine(current, segment);
@@ -80,6 +80,26 @@ internal static class EvidenceFiles
         }
 
         return file;
+    }
+
+    private static void RejectLinkedAncestors(String path)
+    {
+        String current = Path.GetFullPath(path);
+        while (true)
+        {
+            if (File.Exists(current) || Directory.Exists(current))
+            {
+                RejectLink(current);
+            }
+
+            String? parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(current));
+            if (String.IsNullOrEmpty(parent) || parent == current)
+            {
+                break;
+            }
+
+            current = parent;
+        }
     }
 
     private static void RejectLink(String path)
