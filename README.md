@@ -1,5 +1,7 @@
 # InterviewFingerprint
 
+[![.NET build and CLI smoke tests](https://github.com/DianeLeigh76/interview-work-watermark/actions/workflows/dotnet.yml/badge.svg)](https://github.com/DianeLeigh76/interview-work-watermark/actions/workflows/dotnet.yml)
+
 Open-source proof-of-origin tools for interview take-home assignments, artwork and code submissions.
 
 **Status: early experimental v0.2 prototype, not a forensic-grade watermarking system.** Built in C# for .NET 10.
@@ -24,7 +26,7 @@ dotnet run -- archive --in "C:\Submissions\EmployerA" --out "C:\Evidence\Employe
 dotnet run -- check-archive --in "C:\Submissions\EmployerA" --manifest "C:\Evidence\EmployerA.json"
 ```
 
-Run `dotnet run --` to see usage.
+Before using `mark` or `verify`, set `IFP_SECRET` to a private random secret of at least 16 characters. Do not use the example placeholders as real secrets. Run `dotnet run --` to see usage.
 
 For safety, provide secret keys through a restricted input mechanism in a future release; the current CLI's `IFP_SECRET` is read from an environment variable, which can still be exposed to privileged processes. Never commit real secrets or confidential source materials to GitHub.
 
@@ -41,13 +43,13 @@ For safety, provide secret keys through a restricted input mechanism in a future
 - The method depends on an unchanged 8x8 pixel grid. **Resizing, rotation, cropping, screenshots, color conversion, heavy JPEG compression, print/scan, and adversarial removal can defeat it.** PNG copies at the same dimensions have the best chance.
 - Flat white/black areas, transparent images and saturation may weaken the signal. The prototype processes RGB values while preserving alpha; do not use it to protect tiny icons or image assets whose color fidelity is critical.
 - 64-bit fingerprints plus multiple votes are not formal proof of origin. The verifier is keyed but not an independent court-ready forensic measurement. Calibrate false-positive rates on clean controls.
-- The detector is deliberately conservative: it requires all 64 bits and at least 65% average agreement; some genuinely marked images will fail.
+- The detector is deliberately conservative: it requires all 64 bits and at least 75% average agreement; some genuinely marked images will fail.
 - This version provides no cryptographic signing of manifests; use an independent timestamp or signing solution to strengthen evidence.
 - This project does not automatically establish rights, copyright infringement, compensation owed, a fake job posting, or an employer's intent.
 
 ## Architecture / planned roadmap
 
-- **v0.1**: image transform + verifier + hash manifest (this version).
+- **v0.1**: image transform + verifier + hash manifest (initial prototype).
 - **v0.2**: test harness with image comparison metrics, automatic negative controls, and image transformation robustness matrix; signature and trusted timestamp integration.
 - **v0.3**: optional semantic fingerprinting for text and code, applying deterministic *reviewable* edits without changing behavior; requires language-aware parsers, not invisible Unicode characters.
 - **v0.4**: DOCX/PPTX/PDF workflows that modify appropriate rendered components and preserve document editability; batch project view.

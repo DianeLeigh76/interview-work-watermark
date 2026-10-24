@@ -87,6 +87,13 @@ internal static class Program
         String manifest = Path.Combine(folder, "manifest.json");
         RequireExit(application, 0, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
         RequireExit(application, 0, "check-archive", "--in", evidence + Path.DirectorySeparatorChar, "--manifest", manifest);
+        String maliciousManifest = Path.Combine(folder, "malicious-manifest.json");
+        String manifestJson = File.ReadAllText(manifest);
+        Require(manifestJson.Contains("submission.txt", StringComparison.Ordinal), "Expected test file in manifest");
+        File.WriteAllText(maliciousManifest,
+            manifestJson.Replace("submission.txt", "../outside.txt", StringComparison.Ordinal));
+        RequireExit(application, 2, "check-archive", "--in", evidence, "--manifest", maliciousManifest);
+        RequireExit(application, 2, "archive", "--in", evidence, "--out", Path.Combine(evidence, "inside.json"), "--id", "submission-one");
         File.WriteAllText(submittedFile, "modified");
         RequireExit(application, 1, "check-archive", "--in", evidence, "--manifest", manifest);
 
