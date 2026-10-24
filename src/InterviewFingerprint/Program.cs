@@ -95,11 +95,15 @@ internal static class Program
                     }
                     String fullInput = Path.GetFullPath(input);
                     String fullOutput = Path.GetFullPath(output);
-                    if (fullOutput.StartsWith(fullInput + Path.DirectorySeparatorChar, PathComparison))
+                    String outputRelative = Path.GetRelativePath(fullInput, fullOutput);
+                    if (outputRelative == "." ||
+                        (outputRelative != ".." &&
+                         !outputRelative.StartsWith(".." + Path.DirectorySeparatorChar, PathComparison) &&
+                         !Path.IsPathRooted(outputRelative)))
                     {
                         throw new ArgumentException("Output must be outside the source directory.");
                     }
-                    var files = Directory.GetFiles(fullInput, "*", SearchOption.AllDirectories)
+                    var files = EvidenceFiles.Enumerate(fullInput)
                         .Order(StringComparer.Ordinal)
                         .Select(file => new FileRecord(Path.GetRelativePath(fullInput, file).Replace('\\', '/'),
                             HashFile(file), new FileInfo(file).Length)).ToArray();
@@ -116,27 +120,53 @@ internal static class Program
                     String manifestFile = Required(options, "manifest");
                     var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(manifestFile))
                         ?? throw new InvalidDataException("Invalid manifest.");
-                    String root = Path.GetFullPath(input);
-                    Int32 errors = 0;
-                    foreach (var entry in manifest.Files)
+                    if (manifest.SchemaVersion != 1 || manifest.Files is null)
                     {
-                        String file = Path.GetFullPath(Path.Combine(root, entry.Path.Replace('/', Path.DirectorySeparatorChar)));
-                        String relative = Path.GetRelativePath(root, file);
-                        if (relative == ".." ||
-                            relative.StartsWith(".." + Path.DirectorySeparatorChar, PathComparison) ||
-                            Path.IsPathRooted(relative))
+                        throw new InvalidDataException("Unsupported or invalid manifest.");
+                    }
+
+                    String root = Path.GetFullPath(input);
+                    StringComparer pathComparer = OperatingSystem.IsWindows()
+                        ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+                    HashSet<String> expected = new HashSet<String>(pathComparer);
+                    Int32 matched = 0;
+                    Int32 errors = 0;
+                    foreach (FileRecord entry in manifest.Files)
+                    {
+                        String file = EvidenceFiles.Resolve(root, entry.Path);
+                        String relative = Path.GetRelativePath(root, file).Replace('\\', '/');
+                        if (!expected.Add(relative))
                         {
-                            throw new InvalidDataException("Manifest contains a path outside the root.");
+                            throw new InvalidDataException("Manifest contains duplicate file paths.");
                         }
-                        Boolean matches = File.Exists(file) && HashFile(file).Equals(entry.Sha256, StringComparison.OrdinalIgnoreCase);
-                        Console.WriteLine($"{(matches ? "OK" : "CHANGED/MISSING")} {entry.Path}");
-                        if (!matches)
+
+                        Boolean matches = File.Exists(file) &&
+                            new FileInfo(file).Length == entry.Bytes &&
+                            HashFile(file).Equals(entry.Sha256, StringComparison.OrdinalIgnoreCase);
+                        Console.WriteLine($"{(matches ? "OK" : "CHANGED/MISSING")} {relative}");
+                        if (matches)
+                        {
+                            matched++;
+                        }
+                        else
                         {
                             errors++;
                         }
                     }
-                    Console.WriteLine($"{manifest.Files.Length - errors}/{manifest.Files.Length} match");
-                    return errors == 0 ? 0 : 1;
+
+                    Int32 extras = 0;
+                    foreach (String file in EvidenceFiles.Enumerate(root))
+                    {
+                        String relative = Path.GetRelativePath(root, file).Replace('\\', '/');
+                        if (!expected.Contains(relative))
+                        {
+                            Console.WriteLine($"EXTRA {relative}");
+                            extras++;
+                        }
+                    }
+
+                    Console.WriteLine($"{matched}/{manifest.Files.Length} match; {extras} unrecorded files");
+                    return errors == 0 && extras == 0 ? 0 : 1;
                 }
                 default: Usage(); return 2;
             }

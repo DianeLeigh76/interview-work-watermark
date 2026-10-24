@@ -11,7 +11,7 @@ Open-source proof-of-origin tools for interview take-home assignments, artwork a
 - `mark`: alters the **actual pixels** of an input image with a keyed 64-bit, repeated DCT fingerprint and outputs a PNG. The fingerprint is not EXIF or an invisible text layer.
 - `verify`: tests a suspect image against a private key and per-submission ID; reports matching bit count and block vote agreement.
 - `archive`: creates a JSON SHA-256 manifest for **any** files, including source code, slides, documents, PDFs and graphics, without changing those files.
-- `check-archive`: checks the archived hashes against locally preserved files.
+- `check-archive`: checks recorded hashes **and file sizes**, rejects duplicate or escaping paths, and reports files added since the manifest was created.
 
 This project does **not yet** hide a fingerprint inside C# source code, prose, PDF text, Office documents, or arbitrary source files. The manifest proves integrity relative to the manifest; it does **not** prove who created a file or when it existed. Independent timestamping and retention of the actual submission are important.
 
@@ -44,6 +44,7 @@ For safety, provide secret keys through a restricted input mechanism in a future
 - Flat white/black areas, transparent images and saturation may weaken the signal. The prototype processes RGB values while preserving alpha; do not use it to protect tiny icons or image assets whose color fidelity is critical.
 - 64-bit fingerprints plus multiple votes are not formal proof of origin. The verifier is keyed but not an independent court-ready forensic measurement. Calibrate false-positive rates on clean controls.
 - The detector is deliberately conservative: it requires all 64 bits and at least 75% average agreement; some genuinely marked images will fail.
+- Evidence archives reject symbolic links and directory junctions rather than following them outside the submission tree. Archive checking also flags extra files and modified file sizes. The manifest is not cryptographically authenticated.
 - This version provides no cryptographic signing of manifests; use an independent timestamp or signing solution to strengthen evidence.
 - This project does not automatically establish rights, copyright infringement, compensation owed, a fake job posting, or an employer's intent.
 
@@ -108,4 +109,4 @@ Remove-Item Env:IFP_SECRET
 The existing image method still has known defects for fully transparent pixels, clipped RGB values, altered geometry, JPEG damage, and adversarial removal. Archive manifests do not carry trustworthy timestamps or digital signatures and may be manipulated; the evidence archive is **integrity-checking assistance, not chain-of-custody proof**. Do not rely on the tool alone in legal proceedings.
 ## Automated verification
 
-GitHub Actions runs `dotnet restore`, `dotnet build` and a dependency-free C# smoke-test executable on Windows and Ubuntu. Smoke tests cover keyed PNG marking/verification, rejection of wrong submission IDs, syntax fingerprints, file manifest round trips, tampering detection and path validation. They do not establish resilience to editing, cropping, screenshots or adversarial attacks.
+GitHub Actions runs `dotnet restore`, `dotnet build` and a dependency-free C# smoke-test executable on Windows and Ubuntu. Smoke tests cover keyed PNG marking/verification, rejection of wrong submission IDs, syntax fingerprints, file manifest round trips, extra-file and size tampering detection, path validation, and Linux symbolic-link rejection. They do not establish resilience to editing, cropping, screenshots or adversarial attacks.

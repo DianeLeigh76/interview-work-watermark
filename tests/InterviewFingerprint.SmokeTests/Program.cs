@@ -87,6 +87,36 @@ internal static class Program
         String manifest = Path.Combine(folder, "manifest.json");
         RequireExit(application, 0, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
         RequireExit(application, 0, "check-archive", "--in", evidence + Path.DirectorySeparatorChar, "--manifest", manifest);
+
+        String extra = Path.Combine(evidence, "not-submitted.txt");
+        File.WriteAllText(extra, "extra");
+        RequireExit(application, 1, "check-archive", "--in", evidence, "--manifest", manifest);
+        File.Delete(extra);
+
+        String manifestJsonForSize = File.ReadAllText(manifest);
+        String sizeAltered = manifestJsonForSize.Replace("\"Bytes\": 8", "\"Bytes\": 9", StringComparison.Ordinal);
+        Require(sizeAltered != manifestJsonForSize, "Expected the archived test file size in JSON");
+        String alteredSizeManifest = Path.Combine(folder, "altered-size.json");
+        File.WriteAllText(alteredSizeManifest, sizeAltered);
+        RequireExit(application, 1, "check-archive", "--in", evidence, "--manifest", alteredSizeManifest);
+
+        RequireExit(application, 2, "archive", "--in", evidence + Path.DirectorySeparatorChar,
+            "--out", Path.Combine(evidence, "inside-trailing.json"), "--id", "submission-one");
+
+        if (!OperatingSystem.IsWindows())
+        {
+            String outside = Path.Combine(folder, "outside.txt");
+            File.WriteAllText(outside, "outside");
+            String linked = Path.Combine(evidence, "linked.txt");
+            File.CreateSymbolicLink(linked, outside);
+            RequireExit(application, 2, "archive", "--in", evidence, "--out",
+                Path.Combine(folder, "linked-archive.json"), "--id", "submission-one");
+            String linkManifest = Path.Combine(folder, "linked-manifest.json");
+            File.WriteAllText(linkManifest, manifestJsonForSize.Replace("submission.txt", "linked.txt", StringComparison.Ordinal));
+            RequireExit(application, 2, "check-archive", "--in", evidence, "--manifest", linkManifest);
+            File.Delete(linked);
+        }
+
         String maliciousManifest = Path.Combine(folder, "malicious-manifest.json");
         String manifestJson = File.ReadAllText(manifest);
         Require(manifestJson.Contains("submission.txt", StringComparison.Ordinal), "Expected test file in manifest");
