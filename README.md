@@ -56,7 +56,7 @@ For safety, provide secret keys through a restricted input mechanism in a future
 ## Dependencies and license
 
 - .NET 10 SDK (LTS)
-- SixLabors.ImageSharp 4.1.3; check the [Six Labors license](https://github.com/SixLabors/ImageSharp/blob/main/LICENSE) to confirm your use qualifies.
+- SkiaSharp 3.119.4 (MIT), with Linux native assets. See `docs/THIRD-PARTY.md` for notices and packaging considerations.
 - Project source code: MIT (see LICENSE). Dependency licensing is separate.
 
 ## Contributing
@@ -93,7 +93,7 @@ dotnet run --project src/InterviewFingerprint -- compare-code --a Example.cs --b
 Remove-Item Env:IFP_SECRET
 ```
 
-**Verification status:** The .NET SDK is not available in the artifact-building environment, so compilation, unit tests, and watermark robustness testing were **not performed**. Do not treat v0.2 as production- or court-ready. The original v0.1 instructions using `--key` are obsolete for v0.2.
+**Verification status:** GitHub Actions now runs .NET 10 builds and deterministic CLI smoke tests on Windows and Linux. Check the latest Actions result before treating a revision as build-verified. Watermark robustness and forensic validity remain unproven; do not treat v0.2 as production- or court-ready. The original v0.1 instructions using `--key` are obsolete for v0.2.
 
 ### Review pass log
 
@@ -104,3 +104,6 @@ Remove-Item Env:IFP_SECRET
 ### Important limitations
 
 The existing image method still has known defects for fully transparent pixels, clipped RGB values, altered geometry, JPEG damage, and adversarial removal. Archive manifests do not carry trustworthy timestamps or digital signatures and may be manipulated; the evidence archive is **integrity-checking assistance, not chain-of-custody proof**. Do not rely on the tool alone in legal proceedings.
+## Automated verification
+
+GitHub Actions runs `dotnet restore`, `dotnet build` and a dependency-free C# smoke-test executable on Windows and Ubuntu. Smoke tests cover keyed PNG marking/verification, rejection of wrong submission IDs, syntax fingerprints, file manifest round trips, tampering detection and path validation. They do not establish resilience to editing, cropping, screenshots or adversarial attacks.

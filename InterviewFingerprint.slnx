@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="src/InterviewFingerprint/InterviewFingerprint.csproj" />
+  <Project Path="tests/InterviewFingerprint.SmokeTests/InterviewFingerprint.SmokeTests.csproj" />
 </Solution>

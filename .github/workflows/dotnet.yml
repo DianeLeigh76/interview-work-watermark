@@ -1,0 +1,33 @@
+name: .NET build and CLI smoke tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    name: Build and smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore InterviewFingerprint.slnx
+      - name: Build
+        run: dotnet build InterviewFingerprint.slnx --configuration Release --no-restore
+      - name: Run CLI smoke tests
+        run: dotnet run --project tests/InterviewFingerprint.SmokeTests --configuration Release --no-build -- src/InterviewFingerprint/bin/Release/net10.0/InterviewFingerprint.dll

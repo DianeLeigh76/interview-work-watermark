@@ -121,7 +121,10 @@ internal static class Program
                     foreach (var entry in manifest.Files)
                     {
                         String file = Path.GetFullPath(Path.Combine(root, entry.Path.Replace('/', Path.DirectorySeparatorChar)));
-                        if (!file.StartsWith(root + Path.DirectorySeparatorChar, PathComparison))
+                        String relative = Path.GetRelativePath(root, file);
+                        if (relative == ".." ||
+                            relative.StartsWith(".." + Path.DirectorySeparatorChar, PathComparison) ||
+                            Path.IsPathRooted(relative))
                         {
                             throw new InvalidDataException("Manifest contains a path outside the root.");
                         }
