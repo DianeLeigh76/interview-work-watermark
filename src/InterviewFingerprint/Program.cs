@@ -65,11 +65,11 @@ internal static class Program
                         if (image.Width != referenceImage.Width || image.Height != referenceImage.Height)
                         {
                             if (Watermark.TryVerifyCropped(image, payload, referenceImage,
-                                out var croppedResult, out Int32 offsetX, out Int32 offsetY))
+                                out var croppedResult, out Int32 offsetX, out Int32 offsetY, out Int32 observedBits))
                             {
                                 Console.WriteLine($"Found candidate block-aligned crop offset ({offsetX}, {offsetY}); " +
                                     "this does not uniquely establish the crop position.");
-                                return ReportVerification(croppedResult);
+                                return ReportVerification(croppedResult, observedBits);
                             }
 
                             if ((Int64)image.Width * referenceImage.Height !=
@@ -207,12 +207,14 @@ internal static class Program
     }
 
     private static Int32 ReportVerification(
-        (Int32 MatchingBits, Double Agreement, Double Weakest) result)
+        (Int32 MatchingBits, Double Agreement, Double Weakest) result, Int32 observedBits = PayloadBits)
     {
-        Console.WriteLine($"Matched bits: {result.MatchingBits}/{PayloadBits}");
+        Console.WriteLine($"Matched bits: {result.MatchingBits}/{observedBits} observed (of {PayloadBits} total)");
         Console.WriteLine($"Average vote agreement: {result.Agreement:P1}");
         Console.WriteLine($"Weakest bit agreement: {result.Weakest:P1}");
-        Boolean valid = Watermark.IsVerified(result);
+        Boolean valid = observedBits == PayloadBits
+            ? Watermark.IsVerified(result)
+            : Watermark.IsCropVerified(result, observedBits);
         Console.WriteLine($"Result: {(valid ? "MATCH" : "NOT VERIFIED")}");
         Console.WriteLine("This is supporting evidence, not a forensic or copyright determination.");
         return valid ? 0 : 1;

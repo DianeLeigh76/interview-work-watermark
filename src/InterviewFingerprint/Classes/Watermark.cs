@@ -69,12 +69,20 @@ internal static class Watermark
     public static (Int32 MatchingBits, Double Agreement, Double Weakest) Verify(SKBitmap image, Byte[] payload)
     {
         EnsureOpaque(image);
-        return VerifyAligned(image, payload, image.Width / Side, 0, 0);
+        var result = VerifyAligned(image, payload, image.Width / Side, 0, 0);
+        return (result.MatchingBits, result.Agreement, result.Weakest);
     }
 
     internal static Boolean IsVerified((Int32 MatchingBits, Double Agreement, Double Weakest) result)
     {
         return result.MatchingBits == BitCount && result.Agreement >= .75 && result.Weakest >= .55;
+    }
+
+    internal static Boolean IsCropVerified(
+        (Int32 MatchingBits, Double Agreement, Double Weakest) result, Int32 observedBits)
+    {
+        return observedBits >= 48 && result.MatchingBits == observedBits &&
+            result.Agreement >= .75 && result.Weakest >= .55;
     }
 
     /// <summary>
@@ -83,9 +91,10 @@ internal static class Watermark
     /// </summary>
     internal static Boolean TryVerifyCropped(SKBitmap image, Byte[] payload, SKBitmap reference,
         out (Int32 MatchingBits, Double Agreement, Double Weakest) result,
-        out Int32 offsetX, out Int32 offsetY)
+        out Int32 offsetX, out Int32 offsetY, out Int32 observedBits)
     {
         result = default;
+        observedBits = 0;
         offsetX = 0;
         offsetY = 0;
         Int32 widthDifference = reference.Width - image.Width;
@@ -104,9 +113,11 @@ internal static class Watermark
             for (Int32 left = 0; left <= widthDifference; left += Side)
             {
                 var candidate = VerifyAligned(image, payload, originalColumns, left / Side, top / Side);
-                if (IsVerified(candidate))
+                var votes = (candidate.MatchingBits, candidate.Agreement, candidate.Weakest);
+                if (IsCropVerified(votes, candidate.ObservedBits))
                 {
-                    result = candidate;
+                    result = votes;
+                    observedBits = candidate.ObservedBits;
                     offsetX = left;
                     offsetY = top;
                     return true;
@@ -117,7 +128,7 @@ internal static class Watermark
         return false;
     }
 
-    private static (Int32 MatchingBits, Double Agreement, Double Weakest) VerifyAligned(
+    private static (Int32 MatchingBits, Double Agreement, Double Weakest, Int32 ObservedBits) VerifyAligned(
         SKBitmap image, Byte[] payload, Int32 originalColumns, Int32 offsetBlocksX, Int32 offsetBlocksY)
     {
         Int32 columns = image.Width / Side;
@@ -145,10 +156,17 @@ internal static class Watermark
         }
 
         Int32 matched = 0;
+        Int32 observed = 0;
         Double agreement = 0;
         Double weakest = 1;
         for (Int32 bit = 0; bit < BitCount; bit++)
         {
+            if (total[bit] == 0)
+            {
+                continue;
+            }
+
+            observed++;
             Boolean expected = ((payload[bit / 8] >> (7 - bit % 8)) & 1) == 1;
             Boolean actual = positive[bit] * 2 >= total[bit];
             if (expected == actual)
@@ -163,7 +181,7 @@ internal static class Watermark
             weakest = Math.Min(weakest, vote);
         }
 
-        return (matched, agreement / BitCount, weakest);
+        return (matched, agreement / observed, weakest, observed);
     }
 
     private static void EnsureOpaque(SKBitmap image)
