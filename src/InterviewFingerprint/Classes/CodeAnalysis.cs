@@ -1,6 +1,7 @@
 using InterviewFingerprint.Records;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace InterviewFingerprint.Classes;
