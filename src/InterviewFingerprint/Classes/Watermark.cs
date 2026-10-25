@@ -68,6 +68,58 @@ internal static class Watermark
 
     public static (Int32 MatchingBits, Double Agreement, Double Weakest) Verify(SKBitmap image, Byte[] payload)
     {
+        EnsureOpaque(image);
+        return VerifyAligned(image, payload, image.Width / Side, 0, 0);
+    }
+
+    internal static Boolean IsVerified((Int32 MatchingBits, Double Agreement, Double Weakest) result)
+    {
+        return result.MatchingBits == BitCount && result.Agreement >= .75 && result.Weakest >= .55;
+    }
+
+    /// <summary>
+    /// Searches for 8-pixel-aligned cropping using the marked reference's original block grid.
+    /// A matching offset is a candidate, not a unique determination of where cropping occurred.
+    /// </summary>
+    internal static Boolean TryVerifyCropped(SKBitmap image, Byte[] payload, SKBitmap reference,
+        out (Int32 MatchingBits, Double Agreement, Double Weakest) result,
+        out Int32 offsetX, out Int32 offsetY)
+    {
+        result = default;
+        offsetX = 0;
+        offsetY = 0;
+        Int32 widthDifference = reference.Width - image.Width;
+        Int32 heightDifference = reference.Height - image.Height;
+        if (widthDifference < 0 || heightDifference < 0 ||
+            (widthDifference == 0 && heightDifference == 0) ||
+            widthDifference > 64 || heightDifference > 64)
+        {
+            return false;
+        }
+
+        EnsureOpaque(image);
+        Int32 originalColumns = reference.Width / Side;
+        for (Int32 top = 0; top <= heightDifference; top += Side)
+        {
+            for (Int32 left = 0; left <= widthDifference; left += Side)
+            {
+                var candidate = VerifyAligned(image, payload, originalColumns, left / Side, top / Side);
+                if (IsVerified(candidate))
+                {
+                    result = candidate;
+                    offsetX = left;
+                    offsetY = top;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static (Int32 MatchingBits, Double Agreement, Double Weakest) VerifyAligned(
+        SKBitmap image, Byte[] payload, Int32 originalColumns, Int32 offsetBlocksX, Int32 offsetBlocksY)
+    {
         Int32 columns = image.Width / Side;
         Int32 count = columns * (image.Height / Side);
         if (count < BitCount * 5)
@@ -75,17 +127,16 @@ internal static class Watermark
             throw new ArgumentException("Image too small to verify.");
         }
 
-        EnsureOpaque(image);
         Int32[] positive = new Int32[BitCount];
         Int32[] total = new Int32[BitCount];
 
         for (Int32 index = 0; index < count; index++)
         {
-            Int32 x = (index % columns) * Side;
-            Int32 y = (index / columns) * Side;
-            Double[,] coeff = Transform(ReadLuma(image, x, y), false);
-            Int32 slot = index % BitCount;
-            if (coeff[2, 3] - coeff[3, 2] >= 0)
+            Int32 blockX = index % columns;
+            Int32 blockY = index / columns;
+            Int32 slot = ((blockY + offsetBlocksY) * originalColumns +
+                blockX + offsetBlocksX) % BitCount;
+            if (CoefficientDifference(image, blockX * Side, blockY * Side) >= 0)
             {
                 positive[slot]++;
             }
@@ -128,6 +179,25 @@ internal static class Watermark
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Computes only DCT[2,3] - DCT[3,2], avoiding a full 8x8 DCT during verification.
+    /// </summary>
+    private static Double CoefficientDifference(SKBitmap image, Int32 x, Int32 y)
+    {
+        Double difference = 0;
+        for (Int32 row = 0; row < Side; row++)
+        {
+            for (Int32 col = 0; col < Side; col++)
+            {
+                SKColor pixel = image.GetPixel(x + col, y + row);
+                Double luma = .2126 * pixel.Red + .7152 * pixel.Green + .0722 * pixel.Blue;
+                difference += luma * (Cos[2, row] * Cos[3, col] - Cos[3, row] * Cos[2, col]);
+            }
+        }
+
+        return Scale(2) * Scale(3) * difference;
     }
 
     private static Double[,] ReadLuma(SKBitmap image, Int32 x, Int32 y)

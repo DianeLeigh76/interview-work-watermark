@@ -67,6 +67,27 @@ internal static class RobustnessMatrix
             String cropped = Path.Combine(folder, "robust-" + pattern + "-cropped.png");
             CreateVariant(marked, cropped, "crop", 0);
             AddResult(rows, application, secret, pattern, "crop-16px", cropped, id, true, null, null);
+            AddResult(rows, application, secret, pattern, "crop-16px-reference", cropped, id, true, marked, null);
+            if (!(Boolean)rows[^1]["Detected"])
+            {
+                throw new InvalidOperationException("Reference-assisted 16px crop recovery failed for " + pattern);
+            }
+
+            AddResult(rows, application, secret, pattern, "crop-wrong-id-reference",
+                cropped, id + "-wrong", false, marked, null);
+            if ((Boolean)rows[^1]["Detected"])
+            {
+                throw new InvalidOperationException("Wrong ID was accepted for cropped image: " + pattern);
+            }
+
+            String asymmetric = Path.Combine(folder, "robust-" + pattern + "-asymmetric-crop.png");
+            CreateVariant(marked, asymmetric, "crop-asymmetric", 0);
+            AddResult(rows, application, secret, pattern, "crop-asymmetric-reference",
+                asymmetric, id, true, marked, null);
+            if (!(Boolean)rows[^1]["Detected"])
+            {
+                throw new InvalidOperationException("Reference-assisted asymmetric crop recovery failed for " + pattern);
+            }
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(reportPath)!);
@@ -186,15 +207,18 @@ internal static class RobustnessMatrix
             return;
         }
 
-        Int32 offset = variant == "crop" ? 16 : 0;
-        Int32 width = source.Width - offset * 2;
-        Int32 height = source.Height - offset * 2;
+        Int32 left = variant == "crop" ? 16 : variant == "crop-asymmetric" ? 8 : 0;
+        Int32 top = variant is "crop" or "crop-asymmetric" ? 16 : 0;
+        Int32 right = variant is "crop" or "crop-asymmetric" ? 16 : 0;
+        Int32 bottom = variant == "crop" ? 16 : 0;
+        Int32 width = source.Width - left - right;
+        Int32 height = source.Height - top - bottom;
         using SKBitmap changed = new SKBitmap(width, height);
         for (Int32 y = 0; y < height; y++)
         {
             for (Int32 x = 0; x < width; x++)
             {
-                SKColor pixel = source.GetPixel(x + offset, y + offset);
+                SKColor pixel = source.GetPixel(x + left, y + top);
                 if (variant == "grayscale")
                 {
                     Byte value = (Byte)Math.Clamp(Math.Round(

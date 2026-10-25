@@ -13,7 +13,7 @@ internal static class CodeAnalysis
         // C# lexer, not regex: preserves String literals and syntax but ignores trivia.
         String source = File.ReadAllText(file);
         return SyntaxFactory.ParseTokens(source)
-            .Where(t => t.Kind() != Microsoft.CodeAnalysis.CSharp.SyntaxKind.EndOfFileToken)
+            .Where(t => !t.IsKind(SyntaxKind.EndOfFileToken))
             .Select(t => $"{(Int32)t.Kind()}:{t.Text}")
             .ToArray();
     }

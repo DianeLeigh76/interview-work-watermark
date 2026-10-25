@@ -18,7 +18,8 @@ internal static class Program
         {
             if (arguments.Length == 0)
             {
-                Usage(); return 2;
+                Usage();
+                return 2;
             }
             String command = arguments[0].ToLowerInvariant();
             var options = Parse(arguments.Skip(1).ToArray());
@@ -52,18 +53,41 @@ internal static class Program
                     Byte[] payload = Watermark.Payload(Secret(), Required(options, "id"));
                     if (options.TryGetValue("reference", out String? reference))
                     {
-                        using SKBitmap referenceImage = SKBitmap.Decode(reference) ?? throw new InvalidDataException("Unable to decode reference image.");
-                        if ((Int64)image.Width * referenceImage.Height != (Int64)image.Height * referenceImage.Width)
+                        using SKBitmap referenceImage = SKBitmap.Decode(reference)
+                            ?? throw new InvalidDataException("Unable to decode reference image.");
+                        var referenceResult = Watermark.Verify(referenceImage, payload);
+                        if (!Watermark.IsVerified(referenceResult))
                         {
-                            throw new ArgumentException("Aspect ratio differs: this verifier cannot handle cropping or distortion.");
+                            Console.WriteLine("Reference image does not verify with this key and submission ID.");
+                            return ReportVerification(referenceResult);
                         }
+
                         if (image.Width != referenceImage.Width || image.Height != referenceImage.Height)
                         {
-                            using SKBitmap resized = image.Resize(new SKImageInfo(referenceImage.Width, referenceImage.Height), SKSamplingOptions.Default) ?? throw new InvalidOperationException("Unable to resize image.");
-                            return VerifyImage(resized, payload);
+                            if (Watermark.TryVerifyCropped(image, payload, referenceImage,
+                                out var croppedResult, out Int32 offsetX, out Int32 offsetY))
+                            {
+                                Console.WriteLine($"Found candidate block-aligned crop offset ({offsetX}, {offsetY}); " +
+                                    "this does not uniquely establish the crop position.");
+                                return ReportVerification(croppedResult);
+                            }
+
+                            if ((Int64)image.Width * referenceImage.Height !=
+                                (Int64)image.Height * referenceImage.Width)
+                            {
+                                throw new ArgumentException(
+                                    "Aspect ratio differs and no block-aligned crop was verified.");
+                            }
+
+                            using SKBitmap resized = image.Resize(
+                                new SKImageInfo(referenceImage.Width, referenceImage.Height),
+                                SKSamplingOptions.Default)
+                                ?? throw new InvalidOperationException("Unable to resize image.");
+                            return ReportVerification(Watermark.Verify(resized, payload));
                         }
                     }
-                    return VerifyImage(image, payload);
+
+                    return ReportVerification(Watermark.Verify(image, payload));
                 }
                 case "code-fingerprint":
                 {
@@ -168,7 +192,11 @@ internal static class Program
                     Console.WriteLine($"{matched}/{manifest.Files.Length} match; {extras} unrecorded files");
                     return errors == 0 && extras == 0 ? 0 : 1;
                 }
-                default: Usage(); return 2;
+                default:
+                {
+                    Usage();
+                    return 2;
+                }
             }
         }
         catch (Exception problem)
@@ -178,13 +206,13 @@ internal static class Program
         }
     }
 
-    private static Int32 VerifyImage(SKBitmap image, Byte[] payload)
+    private static Int32 ReportVerification(
+        (Int32 MatchingBits, Double Agreement, Double Weakest) result)
     {
-        var result = Watermark.Verify(image, payload);
         Console.WriteLine($"Matched bits: {result.MatchingBits}/{PayloadBits}");
         Console.WriteLine($"Average vote agreement: {result.Agreement:P1}");
         Console.WriteLine($"Weakest bit agreement: {result.Weakest:P1}");
-        Boolean valid = result.MatchingBits == PayloadBits && result.Agreement >= .75 && result.Weakest >= .55;
+        Boolean valid = Watermark.IsVerified(result);
         Console.WriteLine($"Result: {(valid ? "MATCH" : "NOT VERIFIED")}");
         Console.WriteLine("This is supporting evidence, not a forensic or copyright determination.");
         return valid ? 0 : 1;

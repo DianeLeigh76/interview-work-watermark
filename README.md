@@ -40,7 +40,7 @@ For safety, provide secret keys through a restricted input mechanism in a future
 ### Known limitations
 
 - Images must contain at least **320 complete 8x8 blocks** (roughly 160x160 pixels).
-- The method depends on an unchanged 8x8 pixel grid. **Resizing, rotation, cropping, screenshots, color conversion, heavy JPEG compression, print/scan, and adversarial removal can defeat it.** PNG copies at the same dimensions have the best chance.
+- The method depends on an unchanged 8x8 pixel grid. **Rotation, unaligned cropping, screenshots, heavy JPEG compression, print/scan, and adversarial removal can defeat it.** With a verified originally marked `--reference`, the verifier now searches candidate 8-pixel-aligned crop offsets up to 64 pixels removed per dimension before attempting resize recovery. Offsets may be ambiguous; this is not validated forensic crop recovery. PNG copies at the same dimensions remain the safest.
 - Flat white/black areas and saturation may weaken the signal. **Images containing any transparent or partially transparent pixels are now rejected** for both marking and verification; flatten them against an opaque background first. This prevents invisible RGB data from being mistaken for a reliable visible-image watermark. Do not use it for tiny icons or assets whose color fidelity is critical.
 - 64-bit fingerprints plus multiple votes are not formal proof of origin. The verifier is keyed but not an independent court-ready forensic measurement. Calibrate false-positive rates on clean controls.
 - The detector is deliberately conservative: it requires all 64 bits and at least 75% average agreement; some genuinely marked images will fail.
@@ -50,7 +50,7 @@ For safety, provide secret keys through a restricted input mechanism in a future
 
 ## Synthetic watermark robustness diagnostics
 
-The Windows/Linux CI smoke-test job also generates a downloadable JSON artifact, `watermark-robustness.json`. It runs the keyed detector against **synthetic** gradient and noise images, including unmarked, wrong-ID and wrong-secret controls, JPEG compression (quality 90 and 70), grayscale conversion, cropping and 75% resizing with the optional marked-image reference. The report includes matched bits, detection results and marked-image PSNR.
+The Windows/Linux CI smoke-test job also generates a downloadable JSON artifact, `watermark-robustness.json`. It runs the keyed detector against **synthetic** gradient and noise images, including unmarked, wrong-ID and wrong-secret controls, JPEG compression (quality 90 and 70), grayscale conversion, cropped images with and without the verified marked-image reference, and 75% resizing with that reference. The report includes matched bits, detection results and marked-image PSNR.
 
 These observations are **diagnostics, not proof of resilience or statistically valid error rates**. Synthetic images cannot estimate real-world false-positive or false-negative rates, and transformation failures do not necessarily fail CI. The untransformed marked PNG and all synthetic negative controls for both image patterns are now required to pass; transformed-image outcomes remain diagnostic. CI artifacts contain no candidate submissions, private artwork or real secrets.
 
@@ -77,7 +77,7 @@ Security and robustness claims must be accompanied by reproducible tests. Keep o
 The `v0.2` source changes include:
 
 - `mark` and `verify` now read the secret from `IFP_SECRET` rather than taking it on the command line. **Do not print or commit the secret.** An environment variable can still leak to privileged local processes, so this is not equivalent to a hardware-backed secret store.
-- `verify --reference originally-marked.png` can resample a resized suspected image back to its original grid **only when aspect ratios match**. The reference must be the originally submitted marked image, not the unmarked original. This is a heuristic, not validated screenshot or crop robustness. Verification remains keyed; unknown-key public detection is not implemented.
+- `verify --reference originally-marked.png` first validates the reference's keyed watermark, then searches limited block-aligned crop offsets (up to 64 pixels removed per axis) and finally attempts resize recovery when aspect ratios match. The reference must be the originally submitted marked image, not the unmarked original. Crop offsets can be ambiguous; these are heuristics, not validated screenshot or arbitrary crop robustness. Verification remains keyed; unknown-key public detection is not implemented.
 - Verification reports the lowest per-bit vote agreement and uses stricter thresholds. These are engineering heuristics, not measured error rates.
 - `code-fingerprint --in file.cs` uses a Roslyn lexer to create a **trivia-independent syntax fingerprint**, making differences in whitespace/comments irrelevant.
 - `compare-code --a original.cs --b suspected.cs` returns token equality and five-token shingle Jaccard/containment similarity. Different identifiers and changed syntax still affect this; it is *not* semantic equivalence detection. Very short files are particularly unreliable evidence.
@@ -112,7 +112,7 @@ Remove-Item Env:IFP_SECRET
 
 ### Important limitations
 
-The existing image method still has known defects for fully transparent pixels, clipped RGB values, altered geometry, JPEG damage, and adversarial removal. Archive manifests do not carry trustworthy timestamps or digital signatures and may be manipulated; the evidence archive is **integrity-checking assistance, not chain-of-custody proof**. Do not rely on the tool alone in legal proceedings.
+The image method rejects transparent pixels but still has known limitations with clipped RGB values, altered geometry, JPEG damage, and adversarial removal. Archive manifests do not carry trustworthy timestamps or digital signatures and may be manipulated; the evidence archive is **integrity-checking assistance, not chain-of-custody proof**. Do not rely on the tool alone in legal proceedings.
 ## Automated verification
 
 GitHub Actions runs `dotnet restore`, `dotnet build`, `dotnet publish` and a dependency-free C# smoke-test executable against the published CLI on Windows and Ubuntu. Smoke tests cover keyed PNG marking/verification, rejection of wrong submission IDs, syntax fingerprints, file manifest round trips, extra-file and size tampering detection, path validation, and Linux symbolic-link rejection. They do not establish resilience to editing, cropping, screenshots or adversarial attacks.

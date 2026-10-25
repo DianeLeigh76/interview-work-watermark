@@ -28,7 +28,7 @@ jobs:
       - name: Restore
         run: dotnet restore InterviewFingerprint.slnx
       - name: Build
-        run: dotnet build InterviewFingerprint.slnx --configuration Release --no-restore
+        run: dotnet build InterviewFingerprint.slnx --configuration Release --no-restore --warnaserror
       - name: Publish CLI for deployment smoke testing
         run: dotnet publish src/InterviewFingerprint/InterviewFingerprint.csproj --configuration Release --no-restore --output artifacts/publish
       - name: Run published CLI smoke tests and synthetic watermark diagnostics
