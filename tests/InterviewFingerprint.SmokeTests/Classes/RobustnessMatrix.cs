@@ -36,6 +36,17 @@ internal static class RobustnessMatrix
             AddResult(rows, application, secret, pattern, "marked-png", marked, id, true, null, psnr);
             AddResult(rows, application, secret, pattern, "unmarked-control", original, id, false, null, null);
             AddResult(rows, application, secret, pattern, "wrong-id-control", marked, id + "-wrong", false, null, null);
+            AddResult(rows, application, secret + "-incorrect", pattern, "wrong-key-control", marked, id, false, null, null);
+
+            // Unlike transformation diagnostics, these four baseline controls must always pass.
+            Int32 baseline = rows.Count - 4;
+            if (!(Boolean)rows[baseline]["Detected"] ||
+                (Boolean)rows[baseline + 1]["Detected"] ||
+                (Boolean)rows[baseline + 2]["Detected"] ||
+                (Boolean)rows[baseline + 3]["Detected"])
+            {
+                throw new InvalidOperationException("Watermark baseline or negative-control regression for " + pattern);
+            }
 
             Int32[] qualities = [90, 70];
             foreach (Int32 quality in qualities)
@@ -74,6 +85,12 @@ internal static class RobustnessMatrix
         Int32 falsePositives = rows.Count(row => !(Boolean)row["ExpectedWatermark"] && (Boolean)row["Detected"]);
         Console.WriteLine($"DIAGNOSTIC: {detected}/{rows.Count} detected; " +
             $"{falsePositives}/{negativeControls} synthetic negative controls detected; report: {reportPath}");
+        foreach (IGrouping<String, Dictionary<String, Object>> group in
+            rows.GroupBy(row => (String)row["Transform"]).OrderBy(group => group.Key, StringComparer.Ordinal))
+        {
+            Int32 matches = group.Count(row => (Boolean)row["Detected"]);
+            Console.WriteLine($"DIAGNOSTIC {group.Key}: {matches}/{group.Count()} detected");
+        }
     }
 
     private static void AddResult(List<Dictionary<String, Object>> rows, String application, String secret,

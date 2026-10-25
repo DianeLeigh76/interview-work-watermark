@@ -78,6 +78,24 @@ internal static class Program
         RequireExit(application, 1, "verify", "--in", marked, "--id", "different-submission");
         RequireExit(application, 1, "verify", "--in", input, "--id", "submission-one");
 
+        // A watermark hidden in transparent RGB can disappear when an image is composited.
+        // Reject such inputs before producing misleading evidence.
+        String transparent = Path.Combine(folder, "transparent.png");
+        String rejectedOutput = Path.Combine(folder, "transparent-marked.png");
+        using (SKBitmap translucent = new SKBitmap(256, 256))
+        {
+            translucent.Erase(new SKColor(60, 80, 100, 128));
+            using SKImage image = SKImage.FromBitmap(translucent);
+            using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+            using FileStream output = File.Create(transparent);
+            data.SaveTo(output);
+        }
+
+        RequireExit(application, 2, "mark", "--in", transparent, "--out", rejectedOutput,
+            "--id", "submission-one");
+        Require(!File.Exists(rejectedOutput), "Rejected transparent image must not produce a marked output");
+        RequireExit(application, 2, "verify", "--in", transparent, "--id", "submission-one");
+
         String first = Path.Combine(folder, "First.cs");
         String second = Path.Combine(folder, "Second.cs");
         File.WriteAllText(first, "class Example { Int32 Answer() { return 42; } }");

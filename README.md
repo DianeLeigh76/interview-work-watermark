@@ -41,7 +41,7 @@ For safety, provide secret keys through a restricted input mechanism in a future
 
 - Images must contain at least **320 complete 8x8 blocks** (roughly 160x160 pixels).
 - The method depends on an unchanged 8x8 pixel grid. **Resizing, rotation, cropping, screenshots, color conversion, heavy JPEG compression, print/scan, and adversarial removal can defeat it.** PNG copies at the same dimensions have the best chance.
-- Flat white/black areas, transparent images and saturation may weaken the signal. The prototype processes RGB values while preserving alpha; do not use it to protect tiny icons or image assets whose color fidelity is critical.
+- Flat white/black areas and saturation may weaken the signal. **Images containing any transparent or partially transparent pixels are now rejected** for both marking and verification; flatten them against an opaque background first. This prevents invisible RGB data from being mistaken for a reliable visible-image watermark. Do not use it for tiny icons or assets whose color fidelity is critical.
 - 64-bit fingerprints plus multiple votes are not formal proof of origin. The verifier is keyed but not an independent court-ready forensic measurement. Calibrate false-positive rates on clean controls.
 - The detector is deliberately conservative: it requires all 64 bits and at least 75% average agreement; some genuinely marked images will fail.
 - Evidence archives reject symbolic links and directory junctions rather than following them outside the submission tree. Archive checking also flags extra files and modified file sizes. The manifest is not cryptographically authenticated.
@@ -50,9 +50,9 @@ For safety, provide secret keys through a restricted input mechanism in a future
 
 ## Synthetic watermark robustness diagnostics
 
-The Windows/Linux CI smoke-test job also generates a downloadable JSON artifact, `watermark-robustness.json`. It runs the keyed detector against **synthetic** gradient and noise images, including unmarked and wrong-ID controls, JPEG compression (quality 90 and 70), grayscale conversion, cropping and 75% resizing with the optional marked-image reference. The report includes matched bits, detection results and marked-image PSNR.
+The Windows/Linux CI smoke-test job also generates a downloadable JSON artifact, `watermark-robustness.json`. It runs the keyed detector against **synthetic** gradient and noise images, including unmarked, wrong-ID and wrong-secret controls, JPEG compression (quality 90 and 70), grayscale conversion, cropping and 75% resizing with the optional marked-image reference. The report includes matched bits, detection results and marked-image PSNR.
 
-These observations are **diagnostics, not proof of resilience or statistically valid error rates**. Synthetic images cannot estimate real-world false-positive or false-negative rates, and transformation failures do not necessarily fail CI. The existing untransformed PNG round-trip remains a required passing smoke test. CI artifacts contain no candidate submissions, private artwork or real secrets.
+These observations are **diagnostics, not proof of resilience or statistically valid error rates**. Synthetic images cannot estimate real-world false-positive or false-negative rates, and transformation failures do not necessarily fail CI. The untransformed marked PNG and all synthetic negative controls for both image patterns are now required to pass; transformed-image outcomes remain diagnostic. CI artifacts contain no candidate submissions, private artwork or real secrets.
 
 ## Architecture / planned roadmap
 
@@ -115,4 +115,4 @@ Remove-Item Env:IFP_SECRET
 The existing image method still has known defects for fully transparent pixels, clipped RGB values, altered geometry, JPEG damage, and adversarial removal. Archive manifests do not carry trustworthy timestamps or digital signatures and may be manipulated; the evidence archive is **integrity-checking assistance, not chain-of-custody proof**. Do not rely on the tool alone in legal proceedings.
 ## Automated verification
 
-GitHub Actions runs `dotnet restore`, `dotnet build` and a dependency-free C# smoke-test executable on Windows and Ubuntu. Smoke tests cover keyed PNG marking/verification, rejection of wrong submission IDs, syntax fingerprints, file manifest round trips, extra-file and size tampering detection, path validation, and Linux symbolic-link rejection. They do not establish resilience to editing, cropping, screenshots or adversarial attacks.
+GitHub Actions runs `dotnet restore`, `dotnet build`, `dotnet publish` and a dependency-free C# smoke-test executable against the published CLI on Windows and Ubuntu. Smoke tests cover keyed PNG marking/verification, rejection of wrong submission IDs, syntax fingerprints, file manifest round trips, extra-file and size tampering detection, path validation, and Linux symbolic-link rejection. They do not establish resilience to editing, cropping, screenshots or adversarial attacks.

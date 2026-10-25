@@ -34,6 +34,7 @@ internal static class Watermark
             throw new ArgumentException("Image too small. Need at least 320 full 8x8 blocks.");
         }
 
+        EnsureOpaque(image);
         Int32 columns = image.Width / Side;
         for (Int32 index = 0; index < count; index++)
         {
@@ -74,6 +75,7 @@ internal static class Watermark
             throw new ArgumentException("Image too small to verify.");
         }
 
+        EnsureOpaque(image);
         Int32[] positive = new Int32[BitCount];
         Int32[] total = new Int32[BitCount];
 
@@ -111,6 +113,21 @@ internal static class Watermark
         }
 
         return (matched, agreement / BitCount, weakest);
+    }
+
+    private static void EnsureOpaque(SKBitmap image)
+    {
+        for (Int32 y = 0; y < image.Height; y++)
+        {
+            for (Int32 x = 0; x < image.Width; x++)
+            {
+                if (image.GetPixel(x, y).Alpha != Byte.MaxValue)
+                {
+                    throw new ArgumentException(
+                        "Images containing transparency must be flattened against an opaque background before marking or verification.");
+                }
+            }
+        }
     }
 
     private static Double[,] ReadLuma(SKBitmap image, Int32 x, Int32 y)
