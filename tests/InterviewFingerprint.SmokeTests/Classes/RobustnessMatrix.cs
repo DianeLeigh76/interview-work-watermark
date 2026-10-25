@@ -88,6 +88,40 @@ internal static class RobustnessMatrix
             {
                 throw new InvalidOperationException("Reference-assisted asymmetric crop recovery failed for " + pattern);
             }
+
+            String unaligned = Path.Combine(folder, "robust-" + pattern + "-unaligned-crop.png");
+            CreateVariant(marked, unaligned, "crop-unaligned", 0);
+            AddResult(rows, application, secret, pattern, "crop-unaligned-reference",
+                unaligned, id, true, marked, null);
+            if (!(Boolean)rows[^1]["Detected"])
+            {
+                throw new InvalidOperationException("Reference-assisted unaligned crop recovery failed for " + pattern);
+            }
+
+            AddResult(rows, application, secret, pattern, "crop-unaligned-wrong-id",
+                unaligned, id + "-wrong", false, marked, null);
+            if ((Boolean)rows[^1]["Detected"])
+            {
+                throw new InvalidOperationException("Wrong ID accepted for unaligned crop: " + pattern);
+            }
+
+            String cleanCrop = Path.Combine(folder, "robust-" + pattern + "-clean-crop.png");
+            CreateVariant(original, cleanCrop, "crop-unaligned", 0);
+            AddResult(rows, application, secret, pattern, "crop-unaligned-unmarked",
+                cleanCrop, id, false, marked, null);
+            if ((Boolean)rows[^1]["Detected"])
+            {
+                throw new InvalidOperationException("Unmarked crop accepted against marked reference: " + pattern);
+            }
+
+            String onePixel = Path.Combine(folder, "robust-" + pattern + "-one-pixel-crop.png");
+            CreateVariant(marked, onePixel, "crop-one-pixel", 0);
+            AddResult(rows, application, secret, pattern, "crop-one-pixel-reference",
+                onePixel, id, true, marked, null);
+            if (!(Boolean)rows[^1]["Detected"])
+            {
+                throw new InvalidOperationException("Reference-assisted one-pixel crop recovery failed for " + pattern);
+            }
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(reportPath)!);
@@ -207,10 +241,33 @@ internal static class RobustnessMatrix
             return;
         }
 
-        Int32 left = variant == "crop" ? 16 : variant == "crop-asymmetric" ? 8 : 0;
-        Int32 top = variant is "crop" or "crop-asymmetric" ? 16 : 0;
-        Int32 right = variant is "crop" or "crop-asymmetric" ? 16 : 0;
-        Int32 bottom = variant == "crop" ? 16 : 0;
+        Int32 left = variant switch
+        {
+            "crop" => 16,
+            "crop-asymmetric" => 8,
+            "crop-unaligned" => 13,
+            "crop-one-pixel" => 1,
+            _ => 0
+        };
+        Int32 top = variant switch
+        {
+            "crop" or "crop-asymmetric" => 16,
+            "crop-unaligned" => 5,
+            "crop-one-pixel" => 1,
+            _ => 0
+        };
+        Int32 right = variant switch
+        {
+            "crop" or "crop-asymmetric" => 16,
+            "crop-unaligned" => 11,
+            _ => 0
+        };
+        Int32 bottom = variant switch
+        {
+            "crop" => 16,
+            "crop-unaligned" => 7,
+            _ => 0
+        };
         Int32 width = source.Width - left - right;
         Int32 height = source.Height - top - bottom;
         using SKBitmap changed = new SKBitmap(width, height);

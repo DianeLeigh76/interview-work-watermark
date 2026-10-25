@@ -67,7 +67,7 @@ internal static class Program
                             if (Watermark.TryVerifyCropped(image, payload, referenceImage,
                                 out var croppedResult, out Int32 offsetX, out Int32 offsetY, out Int32 observedBits))
                             {
-                                Console.WriteLine($"Found candidate block-aligned crop offset ({offsetX}, {offsetY}); " +
+                                Console.WriteLine($"Found candidate crop offset ({offsetX}, {offsetY}); " +
                                     "this does not uniquely establish the crop position.");
                                 return ReportVerification(croppedResult, observedBits);
                             }
@@ -76,7 +76,7 @@ internal static class Program
                                 (Int64)image.Height * referenceImage.Width)
                             {
                                 throw new ArgumentException(
-                                    "Aspect ratio differs and no block-aligned crop was verified.");
+                                    "Aspect ratio differs and no supported crop was verified.");
                             }
 
                             using SKBitmap resized = image.Resize(

@@ -86,7 +86,7 @@ internal static class Watermark
     }
 
     /// <summary>
-    /// Searches for 8-pixel-aligned cropping using the marked reference's original block grid.
+    /// Searches for pixel-aligned cropping using the marked reference's original block grid.\n    /// Caches DCT votes by 8x8 phase to avoid recomputing them for every offset.
     /// A matching offset is a candidate, not a unique determination of where cropping occurred.
     /// </summary>
     internal static Boolean TryVerifyCropped(SKBitmap image, Byte[] payload, SKBitmap reference,
@@ -108,15 +108,38 @@ internal static class Watermark
 
         EnsureOpaque(image);
         Int32 originalColumns = reference.Width / Side;
-        for (Int32 top = 0; top <= heightDifference; top += Side)
+        Dictionary<(Int32 X, Int32 Y), (Int32[] Positive, Int32[] Total)> cachedVotes = new();
+
+        // A crop need not start on an 8-pixel boundary. Reuse DCT votes for
+        // each of the 64 pixel-grid phases, then test the original block indices.
+        for (Int32 top = 0; top <= heightDifference; top++)
         {
-            for (Int32 left = 0; left <= widthDifference; left += Side)
+            for (Int32 left = 0; left <= widthDifference; left++)
             {
-                var candidate = VerifyAligned(image, payload, originalColumns, left / Side, top / Side);
-                var votes = (candidate.MatchingBits, candidate.Agreement, candidate.Weakest);
-                if (IsCropVerified(votes, candidate.ObservedBits))
+                Int32 phaseX = (Side - left % Side) % Side;
+                Int32 phaseY = (Side - top % Side) % Side;
+                Int32 columns = (image.Width - phaseX) / Side;
+                Int32 rows = (image.Height - phaseY) / Side;
+                if (columns * rows < BitCount * 5)
                 {
-                    result = votes;
+                    continue;
+                }
+
+                (Int32 X, Int32 Y) phase = (phaseX, phaseY);
+                if (!cachedVotes.TryGetValue(phase, out var votes))
+                {
+                    votes = CountVotes(image, originalColumns, phaseX, phaseY);
+                    cachedVotes.Add(phase, votes);
+                }
+
+                Int32 startBlockX = (left + Side - 1) / Side;
+                Int32 startBlockY = (top + Side - 1) / Side;
+                Int32 shift = (startBlockY * originalColumns + startBlockX) % BitCount;
+                var candidate = EvaluateVotes(votes.Positive, votes.Total, payload, shift);
+                var resultVotes = (candidate.MatchingBits, candidate.Agreement, candidate.Weakest);
+                if (IsCropVerified(resultVotes, candidate.ObservedBits))
+                {
+                    result = resultVotes;
                     observedBits = candidate.ObservedBits;
                     offsetX = left;
                     offsetY = top;
@@ -131,57 +154,73 @@ internal static class Watermark
     private static (Int32 MatchingBits, Double Agreement, Double Weakest, Int32 ObservedBits) VerifyAligned(
         SKBitmap image, Byte[] payload, Int32 originalColumns, Int32 offsetBlocksX, Int32 offsetBlocksY)
     {
-        Int32 columns = image.Width / Side;
-        Int32 count = columns * (image.Height / Side);
-        if (count < BitCount * 5)
+        var votes = CountVotes(image, originalColumns, 0, 0);
+        Int32 shift = (offsetBlocksY * originalColumns + offsetBlocksX) % BitCount;
+        return EvaluateVotes(votes.Positive, votes.Total, payload, shift);
+    }
+
+    private static (Int32[] Positive, Int32[] Total) CountVotes(
+        SKBitmap image, Int32 originalColumns, Int32 phaseX, Int32 phaseY)
+    {
+        Int32 columns = (image.Width - phaseX) / Side;
+        Int32 rows = (image.Height - phaseY) / Side;
+        if (columns * rows < BitCount * 5)
         {
             throw new ArgumentException("Image too small to verify.");
         }
 
         Int32[] positive = new Int32[BitCount];
         Int32[] total = new Int32[BitCount];
-
-        for (Int32 index = 0; index < count; index++)
+        for (Int32 blockY = 0; blockY < rows; blockY++)
         {
-            Int32 blockX = index % columns;
-            Int32 blockY = index / columns;
-            Int32 slot = ((blockY + offsetBlocksY) * originalColumns +
-                blockX + offsetBlocksX) % BitCount;
-            if (CoefficientDifference(image, blockX * Side, blockY * Side) >= 0)
+            for (Int32 blockX = 0; blockX < columns; blockX++)
             {
-                positive[slot]++;
-            }
+                Int32 slot = (blockY * originalColumns + blockX) % BitCount;
+                if (CoefficientDifference(image, phaseX + blockX * Side, phaseY + blockY * Side) >= 0)
+                {
+                    positive[slot]++;
+                }
 
-            total[slot]++;
+                total[slot]++;
+            }
         }
 
+        return (positive, total);
+    }
+
+    private static (Int32 MatchingBits, Double Agreement, Double Weakest, Int32 ObservedBits) EvaluateVotes(
+        Int32[] positive, Int32[] total, Byte[] payload, Int32 slotShift)
+    {
         Int32 matched = 0;
         Int32 observed = 0;
         Double agreement = 0;
         Double weakest = 1;
-        for (Int32 bit = 0; bit < BitCount; bit++)
+        for (Int32 slot = 0; slot < BitCount; slot++)
         {
-            if (total[bit] == 0)
+            if (total[slot] == 0)
             {
                 continue;
             }
 
             observed++;
+            Int32 bit = (slot + slotShift) % BitCount;
             Boolean expected = ((payload[bit / 8] >> (7 - bit % 8)) & 1) == 1;
-            Boolean actual = positive[bit] * 2 >= total[bit];
+            Boolean actual = positive[slot] * 2 >= total[slot];
             if (expected == actual)
             {
                 matched++;
             }
 
             Double vote = expected
-                ? (Double)positive[bit] / total[bit]
-                : (Double)(total[bit] - positive[bit]) / total[bit];
+                ? (Double)positive[slot] / total[slot]
+                : (Double)(total[slot] - positive[slot]) / total[slot];
             agreement += vote;
             weakest = Math.Min(weakest, vote);
         }
 
-        return (matched, agreement / observed, weakest, observed);
+        return observed == 0
+            ? (0, 0, 0, 0)
+            : (matched, agreement / observed, weakest, observed);
     }
 
     private static void EnsureOpaque(SKBitmap image)
