@@ -137,6 +137,18 @@ internal static class Watermark
                 Int32 shift = (startBlockY * originalColumns + startBlockX) % BitCount;
                 var candidate = EvaluateVotes(votes.Positive, votes.Total, payload, shift);
                 var resultVotes = (candidate.MatchingBits, candidate.Agreement, candidate.Weakest);
+                if (candidate.ObservedBits >= 48 &&
+                    (observedBits == 0 ||
+                     (Int64)candidate.MatchingBits * observedBits >
+                     (Int64)result.MatchingBits * candidate.ObservedBits))
+                {
+                    // Retain the best tested candidate for a useful negative result.
+                    result = resultVotes;
+                    observedBits = candidate.ObservedBits;
+                    offsetX = left;
+                    offsetY = top;
+                }
+
                 if (IsCropVerified(resultVotes, candidate.ObservedBits))
                 {
                     result = resultVotes;

@@ -72,11 +72,21 @@ internal static class Program
                                 return ReportVerification(croppedResult, observedBits);
                             }
 
+                            if (image.Width <= referenceImage.Width &&
+                                image.Height <= referenceImage.Height &&
+                                referenceImage.Width - image.Width <= 64 &&
+                                referenceImage.Height - image.Height <= 64)
+                            {
+                                Console.WriteLine("No candidate crop offset met verification thresholds.");
+                                return ReportVerification(croppedResult,
+                                    observedBits == 0 ? PayloadBits : observedBits);
+                            }
+
                             if ((Int64)image.Width * referenceImage.Height !=
                                 (Int64)image.Height * referenceImage.Width)
                             {
                                 throw new ArgumentException(
-                                    "Aspect ratio differs and no supported crop was verified.");
+                                    "Aspect ratio differs and the image is outside supported crop limits.");
                             }
 
                             using SKBitmap resized = image.Resize(
