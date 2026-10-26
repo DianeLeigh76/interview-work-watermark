@@ -166,6 +166,7 @@ internal static class Program
         Directory.CreateDirectory(evidence);
         String submittedFile = Path.Combine(evidence, "submission.txt");
         File.WriteAllText(submittedFile, "original");
+        File.WriteAllBytes(Path.Combine(evidence, "empty.txt"), Array.Empty<Byte>());
         String manifest = Path.Combine(folder, "manifest.json");
         RequireExit(application, 0, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
         String originalManifestJson = File.ReadAllText(manifest);
@@ -173,6 +174,28 @@ internal static class Program
         Require(File.ReadAllText(manifest) == originalManifestJson,
             "A second archive must not overwrite an existing evidence manifest");
         RequireExit(application, 0, "check-archive", "--in", evidence + Path.DirectorySeparatorChar, "--manifest", manifest);
+
+        // Invalid manifest metadata must fail before any file is reported as OK.
+        String badHashManifest = Path.Combine(folder, "bad-hash.json");
+        String badHashJson = originalManifestJson.Replace("\"Sha256\": \"", "\"Sha256\": \"Z",
+            StringComparison.Ordinal);
+        Require(badHashJson != originalManifestJson, "Expected SHA-256 metadata in manifest");
+        File.WriteAllText(badHashManifest, badHashJson);
+        (Int32 badHashExit, String badHashOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", badHashManifest);
+        Require(badHashExit == 2 && !badHashOutput.Contains("OK submission.txt", StringComparison.Ordinal),
+            "Malformed hash must fail before reporting verified files: " + badHashOutput);
+
+        String badLengthManifest = Path.Combine(folder, "bad-length.json");
+        String badLengthJson = originalManifestJson.Replace("\"Bytes\": 8", "\"Bytes\": -1",
+            StringComparison.Ordinal);
+        Require(badLengthJson != originalManifestJson, "Expected archived 8-byte test file");
+        File.WriteAllText(badLengthManifest, badLengthJson);
+        (Int32 badLengthExit, String badLengthOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", badLengthManifest);
+        Require(badLengthExit == 2 && !badLengthOutput.Contains("OK submission.txt", StringComparison.Ordinal),
+            "Negative file length must fail before reporting verified files: " + badLengthOutput);
+
 
         String extra = Path.Combine(evidence, "not-submitted.txt");
         File.WriteAllText(extra, "extra");
