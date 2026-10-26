@@ -23,6 +23,7 @@ internal static class Program
             }
             String command = arguments[0].ToLowerInvariant();
             var options = Parse(arguments.Skip(1).ToArray());
+            ValidateOptions(command, options);
             switch (command)
             {
                 case "mark":
@@ -246,10 +247,38 @@ internal static class Program
             {
                 throw new ArgumentException("Expected --name value pairs.");
             }
-            result[values[index][2..]] = values[index + 1];
+            String name = values[index][2..];
+            if (String.IsNullOrWhiteSpace(name) || !result.TryAdd(name, values[index + 1]))
+            {
+                throw new ArgumentException($"Empty or duplicate option: --{name}");
+            }
         }
+
         return result;
     }
+
+    private static void ValidateOptions(String command, Dictionary<String, String> options)
+    {
+        String[] allowed = command switch
+        {
+            "mark" => ["in", "out", "id", "strength"],
+            "verify" => ["in", "id", "reference"],
+            "code-fingerprint" => ["in"],
+            "compare-code" => ["a", "b"],
+            "archive" => ["in", "out", "id"],
+            "check-archive" => ["in", "manifest"],
+            _ => []
+        };
+
+        foreach (String name in options.Keys)
+        {
+            if (!allowed.Contains(name, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Unknown option --{name} for {command}.");
+            }
+        }
+    }
+
     private static String Required(Dictionary<String, String> options, String name) =>
         options.TryGetValue(name, out var value) && !String.IsNullOrWhiteSpace(value)
             ? value : throw new ArgumentException($"Missing --{name}");
