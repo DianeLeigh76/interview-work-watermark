@@ -38,7 +38,7 @@ internal static class Program
                     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
                     using (SKImage marked = SKImage.FromBitmap(image))
                     using (SKData encoded = marked.Encode(SKEncodedImageFormat.Png, 100))
-                    using (FileStream stream = File.Create(output))
+                    using (FileStream stream = new FileStream(output, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                     {
                         encoded.SaveTo(stream);
                     }
@@ -143,7 +143,11 @@ internal static class Program
                             HashFile(file), new FileInfo(file).Length)).ToArray();
                     var record = new Manifest(1, id, DateTimeOffset.UtcNow, files);
                     Directory.CreateDirectory(Path.GetDirectoryName(fullOutput)!);
-                    File.WriteAllText(fullOutput, JsonSerializer.Serialize(record, new JsonSerializerOptions { WriteIndented = true }));
+                    // Preserve an existing evidence manifest instead of silently replacing it.
+                    using (FileStream stream = new FileStream(fullOutput, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    {
+                        JsonSerializer.Serialize(stream, record, new JsonSerializerOptions { WriteIndented = true });
+                    }
                     Console.WriteLine($"Archived {files.Length} file hashes: {output}");
                     Console.WriteLine("Preserve original files, email headers, and a trustworthy external timestamp.");
                     return 0;
