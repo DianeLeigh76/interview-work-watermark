@@ -9,11 +9,10 @@ namespace InterviewFingerprint.Classes;
 internal static class CodeAnalysis
 {
 
-    private static String[] Tokens(String file)
+    private static String[] Tokens(String source)
     {
         // Ignore ordinary whitespace/comments, but retain directives and disabled text:
         // changing #if or its inactive branch must not appear syntax-identical.
-        String source = File.ReadAllText(file);
         List<String> tokens = new List<String>();
         foreach (SyntaxToken token in SyntaxFactory.ParseTokens(source))
         {
@@ -48,9 +47,14 @@ internal static class CodeAnalysis
 
     internal static FingerprintResult Fingerprint(String file)
     {
-        using var stream = File.OpenRead(file);
-        String exact = Convert.ToHexString(SHA256.HashData(stream));
-        var tokens = Tokens(file);
+        // Hash and tokenize the same byte snapshot, so a file modified between reads
+        // cannot produce an exact hash and a syntax hash for different versions.
+        Byte[] bytes = File.ReadAllBytes(file);
+        String exact = Convert.ToHexString(SHA256.HashData(bytes));
+        using StreamReader reader = new StreamReader(new MemoryStream(bytes), Encoding.UTF8,
+            detectEncodingFromByteOrderMarks: true);
+        String source = reader.ReadToEnd();
+        var tokens = Tokens(source);
         return new(exact, Digest(tokens), tokens.Length);
     }
 
@@ -67,8 +71,8 @@ internal static class CodeAnalysis
 
     internal static ComparisonResult Compare(String a, String b)
     {
-        var first = Tokens(a);
-        var second = Tokens(b);
+        var first = Tokens(File.ReadAllText(a));
+        var second = Tokens(File.ReadAllText(b));
         Boolean identical = Digest(first) == Digest(second);
         var x = Shingles(first);
         var y = Shingles(second);
