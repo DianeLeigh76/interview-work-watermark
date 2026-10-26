@@ -11,12 +11,33 @@ internal static class CodeAnalysis
 
     private static String[] Tokens(String file)
     {
-        // C# lexer, not regex: preserves String literals and syntax but ignores trivia.
+        // Ignore ordinary whitespace/comments, but retain directives and disabled text:
+        // changing #if or its inactive branch must not appear syntax-identical.
         String source = File.ReadAllText(file);
-        return SyntaxFactory.ParseTokens(source)
-            .Where(t => !t.IsKind(SyntaxKind.EndOfFileToken))
-            .Select(t => $"{(Int32)t.Kind()}:{t.Text}")
-            .ToArray();
+        List<String> tokens = new List<String>();
+        foreach (SyntaxToken token in SyntaxFactory.ParseTokens(source))
+        {
+            AddSignificantTrivia(tokens, token.LeadingTrivia);
+            if (!token.IsKind(SyntaxKind.EndOfFileToken))
+            {
+                tokens.Add($"{(Int32)token.Kind()}:{token.Text}");
+            }
+
+            AddSignificantTrivia(tokens, token.TrailingTrivia);
+        }
+
+        return tokens.ToArray();
+    }
+
+    private static void AddSignificantTrivia(List<String> tokens, SyntaxTriviaList triviaList)
+    {
+        foreach (SyntaxTrivia trivia in triviaList)
+        {
+            if (trivia.IsDirective || trivia.IsKind(SyntaxKind.DisabledTextTrivia))
+            {
+                tokens.Add($"trivia:{(Int32)trivia.Kind()}:{trivia.ToString().Trim()}");
+            }
+        }
     }
 
     private static String Digest(IEnumerable<String> tokens)
