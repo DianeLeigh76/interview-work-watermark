@@ -19,3 +19,8 @@
 - Follow CONTRIBUTING.md formatting and namespace rules.
 - Build and test where tools allow; report unexecuted tests honestly.
 - Prefer MIT/Apache/BSD dependencies. Track attribution obligations in documentation.
+
+## Financial authorization and hosted execution
+- Never create, enable, trigger, or run GitHub Actions workflows for this repository. Do not add files under `.github/workflows/`.
+- Do not activate, provision, or configure metered or potentially billable services, hosted CI, runners, cloud resources, or integrations without the repository owner's separate explicit authorization. Free tiers, credits, and current zero-dollar bills are not authorization.
+- Prefer local/offline compilation and testing when available at no cost. If build tools or dependencies are unavailable, perform static review and state clearly which tests were not executed.
