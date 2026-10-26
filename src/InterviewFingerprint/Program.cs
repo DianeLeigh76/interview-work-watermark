@@ -172,10 +172,19 @@ internal static class Program
                     StringComparer pathComparer = OperatingSystem.IsWindows()
                         ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
                     HashSet<String> expected = new HashSet<String>(pathComparer);
-                    Int32 matched = 0;
-                    Int32 errors = 0;
+                    List<(String File, String Relative, FileRecord Record)> validated = new();
+
+                    // Validate the entire manifest before printing any OK results.
+                    // A malformed or duplicate entry must not yield partial verification output.
                     foreach (FileRecord entry in manifest.Files)
                     {
+                        if (entry is null || entry.Bytes < 0 ||
+                            String.IsNullOrEmpty(entry.Sha256) ||
+                            entry.Sha256.Length != 64 || !entry.Sha256.All(Uri.IsHexDigit))
+                        {
+                            throw new InvalidDataException("Manifest contains invalid file metadata.");
+                        }
+
                         String file = EvidenceFiles.Resolve(root, entry.Path);
                         String relative = Path.GetRelativePath(root, file).Replace('\\', '/');
                         if (!expected.Add(relative))
@@ -183,14 +192,22 @@ internal static class Program
                             throw new InvalidDataException("Manifest contains duplicate file paths.");
                         }
 
+                        validated.Add((file, relative, entry));
+                    }
+
+                    Int32 matched = 0;
+                    Int32 errors = 0;
+                    foreach (var item in validated)
+                    {
                         Boolean matches = false;
-                        if (File.Exists(file))
+                        if (File.Exists(item.File))
                         {
-                            var snapshot = HashFileAndLength(file);
-                            matches = snapshot.Bytes == entry.Bytes &&
-                                snapshot.Sha256.Equals(entry.Sha256, StringComparison.OrdinalIgnoreCase);
+                            var snapshot = HashFileAndLength(item.File);
+                            matches = snapshot.Bytes == item.Record.Bytes &&
+                                snapshot.Sha256.Equals(item.Record.Sha256, StringComparison.OrdinalIgnoreCase);
                         }
-                        Console.WriteLine($"{(matches ? "OK" : "CHANGED/MISSING")} {relative}");
+
+                        Console.WriteLine($"{(matches ? "OK" : "CHANGED/MISSING")} {item.Relative}");
                         if (matches)
                         {
                             matched++;
