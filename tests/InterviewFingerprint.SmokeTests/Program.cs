@@ -183,7 +183,7 @@ internal static class Program
         File.WriteAllText(badHashManifest, badHashJson);
         (Int32 badHashExit, String badHashOutput) = Execute(application,
             "check-archive", "--in", evidence, "--manifest", badHashManifest);
-        Require(badHashExit == 2 && !badHashOutput.Contains("OK submission.txt", StringComparison.Ordinal),
+        Require(badHashExit == 2 && !badHashOutput.Contains("OK ", StringComparison.Ordinal),
             "Malformed hash must fail before reporting verified files: " + badHashOutput);
 
         String badLengthManifest = Path.Combine(folder, "bad-length.json");
@@ -193,9 +193,8 @@ internal static class Program
         File.WriteAllText(badLengthManifest, badLengthJson);
         (Int32 badLengthExit, String badLengthOutput) = Execute(application,
             "check-archive", "--in", evidence, "--manifest", badLengthManifest);
-        Require(badLengthExit == 2 && !badLengthOutput.Contains("OK submission.txt", StringComparison.Ordinal),
+        Require(badLengthExit == 2 && !badLengthOutput.Contains("OK ", StringComparison.Ordinal),
             "Negative file length must fail before reporting verified files: " + badLengthOutput);
-
 
         String extra = Path.Combine(evidence, "not-submitted.txt");
         File.WriteAllText(extra, "extra");
