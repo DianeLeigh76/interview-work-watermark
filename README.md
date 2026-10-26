@@ -1,7 +1,5 @@
 # InterviewFingerprint
 
-[![.NET build and CLI smoke tests](https://github.com/DianeLeigh76/interview-work-watermark/actions/workflows/dotnet.yml/badge.svg)](https://github.com/DianeLeigh76/interview-work-watermark/actions/workflows/dotnet.yml)
-
 Open-source proof-of-origin tools for interview take-home assignments, artwork and code submissions.
 
 **Status: early experimental v0.2 prototype, not a forensic-grade watermarking system.** Built in C# for .NET 10.
@@ -50,9 +48,9 @@ For safety, provide secret keys through a restricted input mechanism in a future
 
 ## Synthetic watermark robustness diagnostics
 
-The Windows/Linux CI smoke-test job also generates a downloadable JSON artifact, `watermark-robustness.json`. It runs the keyed detector against **synthetic** gradient and noise images, including unmarked, wrong-ID and wrong-secret controls, JPEG compression (quality 90 and 70), grayscale conversion, cropped images (including unaligned and one-pixel crops) with and without the verified marked-image reference, and 75% resizing with that reference. The report includes matched bits, detection results and marked-image PSNR.
+The optional **local** smoke-test executable can generate `watermark-robustness.json` with `--report`; the report stays on your computer. It runs the keyed detector against **synthetic** gradient and noise images, including unmarked, wrong-ID and wrong-secret controls, JPEG compression (quality 90 and 70), grayscale conversion, cropped images (including unaligned and one-pixel crops) with and without the verified marked-image reference, and 75% resizing with that reference. The report includes matched bits, detection results and marked-image PSNR.
 
-These observations are **diagnostics, not proof of resilience or statistically valid error rates**. Synthetic images cannot estimate real-world false-positive or false-negative rates, and transformation failures do not necessarily fail CI. The untransformed marked PNG and all synthetic negative controls for both image patterns are now required to pass; transformed-image outcomes remain diagnostic. CI artifacts contain no candidate submissions, private artwork or real secrets.
+These observations are **diagnostics, not proof of resilience or statistically valid error rates**. Synthetic images cannot estimate real-world false-positive or false-negative rates, and transformation failures do not necessarily fail CI. The untransformed marked PNG and all synthetic negative controls for both image patterns are now required to pass; transformed-image outcomes remain diagnostic. The synthetic report contains no candidate submissions, private artwork or real secrets.
 
 ## Architecture / planned roadmap
 
@@ -102,7 +100,7 @@ dotnet run --project src/InterviewFingerprint -- compare-code --a Example.cs --b
 Remove-Item Env:IFP_SECRET
 ```
 
-**Verification status:** GitHub Actions now runs .NET 10 builds and deterministic CLI smoke tests on Windows and Linux. Check the latest Actions result before treating a revision as build-verified. Watermark robustness and forensic validity remain unproven; do not treat v0.2 as production- or court-ready. The original v0.1 instructions using `--key` are obsolete for v0.2.
+**Verification status:** Hosted CI has been removed. Build and run the local smoke tests yourself before treating a revision as verified. Changes made after the previous hosted build have **not** been compiled or tested in this review. Watermark robustness and forensic validity remain unproven; do not treat v0.2 as production- or court-ready. The original v0.1 instructions using `--key` are obsolete for v0.2.
 
 ### Review pass log
 
@@ -113,6 +111,17 @@ Remove-Item Env:IFP_SECRET
 ### Important limitations
 
 The image method rejects transparent pixels but still has known limitations with clipped RGB values, altered geometry, JPEG damage, and adversarial removal. Archive manifests do not carry trustworthy timestamps or digital signatures and may be manipulated; the evidence archive is **integrity-checking assistance, not chain-of-custody proof**. Do not rely on the tool alone in legal proceedings.
-## Automated verification
+## Manual local verification (no hosted CI)
 
-GitHub Actions runs `dotnet restore`, `dotnet build`, `dotnet publish` and a dependency-free C# smoke-test executable against the published CLI on Windows and Ubuntu. Smoke tests cover keyed PNG marking/verification, rejection of wrong submission IDs, syntax fingerprints, file manifest round trips, extra-file and size tampering detection, path validation, and Linux symbolic-link rejection. They do not establish resilience to editing, cropping, screenshots or adversarial attacks.
+No GitHub Actions workflows or paid hosted build services are configured. From the repository root, on a machine with the .NET 10 SDK installed, run the following **locally**. Package restore may need to download the open-source dependencies unless they are already cached; it does not configure a hosted build service.
+
+```powershell
+dotnet restore InterviewFingerprint.slnx
+dotnet build InterviewFingerprint.slnx --configuration Release --no-restore
+dotnet publish src/InterviewFingerprint/InterviewFingerprint.csproj --configuration Release --no-restore --output artifacts/publish
+dotnet run --project tests/InterviewFingerprint.SmokeTests --configuration Release --no-build -- artifacts/publish/InterviewFingerprint.dll --report artifacts/watermark-robustness.json
+```
+
+Smoke tests cover keyed PNG marking/verification, rejection of wrong submission IDs, syntax fingerprints, file manifest round trips, rejection of attempts to overwrite an existing marked image or manifest, extra-file and size tampering detection, path validation, and Linux symbolic-link rejection. They do not establish resilience to editing, cropping, screenshots or adversarial attacks. The commands above have **not** been executed as part of this review; no local .NET SDK was available.
+
+**Output safety:** `mark` and `archive` now refuse to replace existing output files. Choose a new output filename for each run, and preserve the originally submitted version and manifest.
