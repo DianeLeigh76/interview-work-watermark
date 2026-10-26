@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using InterviewFingerprint.SmokeTests.Classes;
 using SkiaSharp;
 
@@ -117,6 +119,29 @@ internal static class Program
         (Int32 comparisonExit, String comparisonOutput) = Execute(application, "compare-code", "--a", first, "--b", second);
         Require(comparisonExit == 0 && comparisonOutput.Contains("Syntax-identical: True", StringComparison.Ordinal),
             "comment/whitespace-only changes should preserve the syntax fingerprint: " + comparisonOutput);
+
+        // The exact hash includes the original BOM bytes, while syntax tokens do not.
+        // This also exercises the single-snapshot fingerprinting path.
+        String withBom = Path.Combine(folder, "WithBom.cs");
+        String withoutBom = Path.Combine(folder, "WithoutBom.cs");
+        String bomSource = "class BomExample { Int32 Value = 42; }";
+        File.WriteAllText(withBom, bomSource, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+        File.WriteAllText(withoutBom, bomSource, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        (Int32 bomExit, String bomOutput) = Execute(application, "code-fingerprint", "--in", withBom);
+        (Int32 plainExit, String plainOutput) = Execute(application, "code-fingerprint", "--in", withoutBom);
+        Require(bomExit == 0 && plainExit == 0, "BOM fingerprint commands must succeed");
+        String expectedBomHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(withBom)));
+        String expectedPlainHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(withoutBom)));
+        Require(expectedBomHash != expectedPlainHash, "BOM must affect exact byte hashes");
+        Require(bomOutput.Contains("Exact SHA-256: " + expectedBomHash, StringComparison.Ordinal),
+            "BOM exact hash must cover original file bytes");
+        Require(plainOutput.Contains("Exact SHA-256: " + expectedPlainHash, StringComparison.Ordinal),
+            "Plain exact hash must cover original file bytes");
+        (Int32 bomCompareExit, String bomCompareOutput) = Execute(application,
+            "compare-code", "--a", withBom, "--b", withoutBom);
+        Require(bomCompareExit == 0 &&
+            bomCompareOutput.Contains("Syntax-identical: True", StringComparison.Ordinal),
+            "UTF-8 BOM alone must not change syntax tokens: " + bomCompareOutput);
 
         // Preprocessor directives and disabled branches can change compiled behavior.
         // They must not be discarded along with ordinary comments and whitespace.
