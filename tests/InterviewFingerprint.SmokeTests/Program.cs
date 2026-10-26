@@ -78,6 +78,15 @@ internal static class Program
         RequireExit(application, 2, "mark", "--in", input, "--out", marked, "--id", "submission-one");
         Require(File.ReadAllBytes(marked).SequenceEqual(originalMarkedBytes),
             "A second mark must not overwrite an existing output image");
+        // Typos and duplicate switches must fail rather than silently change evidence settings.
+        String typoOutput = Path.Combine(folder, "typo-marked.png");
+        RequireExit(application, 2, "mark", "--in", input, "--out", typoOutput,
+            "--id", "submission-one", "--strenth", "48");
+        Require(!File.Exists(typoOutput), "Unknown option must not produce a marked image");
+        RequireExit(application, 2, "mark", "--in", input, "--out", typoOutput,
+            "--id", "submission-one", "--id", "submission-two");
+        Require(!File.Exists(typoOutput), "Duplicate option must not produce a marked image");
+
         RequireExit(application, 0, "verify", "--in", marked, "--id", "submission-one");
         RequireExit(application, 1, "verify", "--in", marked, "--id", "different-submission");
         RequireExit(application, 1, "verify", "--in", input, "--id", "submission-one");
