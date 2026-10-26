@@ -140,8 +140,12 @@ internal static class Program
                     }
                     var files = EvidenceFiles.Enumerate(fullInput)
                         .Order(StringComparer.Ordinal)
-                        .Select(file => new FileRecord(Path.GetRelativePath(fullInput, file).Replace('\\', '/'),
-                            HashFile(file), new FileInfo(file).Length)).ToArray();
+                        .Select(file =>
+                        {
+                            var snapshot = HashFileAndLength(file);
+                            return new FileRecord(Path.GetRelativePath(fullInput, file).Replace('\\', '/'),
+                                snapshot.Sha256, snapshot.Bytes);
+                        }).ToArray();
                     var record = new Manifest(1, id, DateTimeOffset.UtcNow, files);
                     Directory.CreateDirectory(Path.GetDirectoryName(fullOutput)!);
                     // Preserve an existing evidence manifest instead of silently replacing it.
@@ -179,9 +183,13 @@ internal static class Program
                             throw new InvalidDataException("Manifest contains duplicate file paths.");
                         }
 
-                        Boolean matches = File.Exists(file) &&
-                            new FileInfo(file).Length == entry.Bytes &&
-                            HashFile(file).Equals(entry.Sha256, StringComparison.OrdinalIgnoreCase);
+                        Boolean matches = false;
+                        if (File.Exists(file))
+                        {
+                            var snapshot = HashFileAndLength(file);
+                            matches = snapshot.Bytes == entry.Bytes &&
+                                snapshot.Sha256.Equals(entry.Sha256, StringComparison.OrdinalIgnoreCase);
+                        }
                         Console.WriteLine($"{(matches ? "OK" : "CHANGED/MISSING")} {relative}");
                         if (matches)
                         {
@@ -296,8 +304,20 @@ internal static class Program
     }
     private static String HashFile(String path)
     {
-        using var file = File.OpenRead(path);
-        return Convert.ToHexString(SHA256.HashData(file));
+        return HashFileAndLength(path).Sha256;
+    }
+
+    private static (String Sha256, Int64 Bytes) HashFileAndLength(String path)
+    {
+        using FileStream file = File.OpenRead(path);
+        Int64 lengthBefore = file.Length;
+        String digest = Convert.ToHexString(SHA256.HashData(file));
+        if (file.Position != lengthBefore || file.Length != lengthBefore)
+        {
+            throw new IOException("Evidence file changed size while being hashed: " + path);
+        }
+
+        return (digest, lengthBefore);
     }
     private static String Secret()
     {
