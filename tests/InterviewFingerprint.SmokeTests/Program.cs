@@ -74,6 +74,10 @@ internal static class Program
 
         RequireExit(application, 0, "mark", "--in", input, "--out", marked, "--id", "submission-one", "--strength", "48");
         Require(File.Exists(marked), "mark did not produce a PNG");
+        Byte[] originalMarkedBytes = File.ReadAllBytes(marked);
+        RequireExit(application, 2, "mark", "--in", input, "--out", marked, "--id", "submission-one");
+        Require(File.ReadAllBytes(marked).SequenceEqual(originalMarkedBytes),
+            "A second mark must not overwrite an existing output image");
         RequireExit(application, 0, "verify", "--in", marked, "--id", "submission-one");
         RequireExit(application, 1, "verify", "--in", marked, "--id", "different-submission");
         RequireExit(application, 1, "verify", "--in", input, "--id", "submission-one");
@@ -111,6 +115,10 @@ internal static class Program
         File.WriteAllText(submittedFile, "original");
         String manifest = Path.Combine(folder, "manifest.json");
         RequireExit(application, 0, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
+        String originalManifestJson = File.ReadAllText(manifest);
+        RequireExit(application, 2, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
+        Require(File.ReadAllText(manifest) == originalManifestJson,
+            "A second archive must not overwrite an existing evidence manifest");
         RequireExit(application, 0, "check-archive", "--in", evidence + Path.DirectorySeparatorChar, "--manifest", manifest);
 
         String extra = Path.Combine(evidence, "not-submitted.txt");
