@@ -109,6 +109,25 @@ internal static class Program
         Require(comparisonExit == 0 && comparisonOutput.Contains("Syntax-identical: True", StringComparison.Ordinal),
             "comment/whitespace-only changes should preserve the syntax fingerprint: " + comparisonOutput);
 
+        // Preprocessor directives and disabled branches can change compiled behavior.
+        // They must not be discarded along with ordinary comments and whitespace.
+        String directiveA = Path.Combine(folder, "DirectiveA.cs");
+        String directiveB = Path.Combine(folder, "DirectiveB.cs");
+        File.WriteAllText(directiveA, "#if FEATURE_A\nclass Choice { Int32 Value = 1; }\n#endif\n");
+        File.WriteAllText(directiveB, "#if FEATURE_B\nclass Choice { Int32 Value = 1; }\n#endif\n");
+        (Int32 directiveExit, String directiveOutput) = Execute(application,
+            "compare-code", "--a", directiveA, "--b", directiveB);
+        Require(directiveExit == 0 &&
+            directiveOutput.Contains("Syntax-identical: False", StringComparison.Ordinal),
+            "Different #if directives must not have identical syntax fingerprints: " + directiveOutput);
+
+        File.WriteAllText(directiveB, "#if FEATURE_A\nclass Choice { Int32 Value = 2; }\n#endif\n");
+        (Int32 disabledExit, String disabledOutput) = Execute(application,
+            "compare-code", "--a", directiveA, "--b", directiveB);
+        Require(disabledExit == 0 &&
+            disabledOutput.Contains("Syntax-identical: False", StringComparison.Ordinal),
+            "Different disabled branches must not have identical syntax fingerprints: " + disabledOutput);
+
         String evidence = Path.Combine(folder, "submission");
         Directory.CreateDirectory(evidence);
         String submittedFile = Path.Combine(evidence, "submission.txt");
