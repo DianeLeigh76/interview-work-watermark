@@ -5,4 +5,4 @@
 
 Package licenses remain with their respective copyright owners. Our MIT project LICENSE covers only our work. Verify transitive/native notices when packaging binaries.
 
-Linux native assets are explicitly referenced for runtime portability. Windows assets are included through SkiaSharp dependencies. CI build and smoke-test status must be checked before claiming validation.
+Linux native assets are explicitly referenced for runtime portability. Windows assets are included through SkiaSharp dependencies. No hosted CI is configured. Build and smoke-test locally before claiming validation; review transitive package and native-library notices before redistributing binaries.
