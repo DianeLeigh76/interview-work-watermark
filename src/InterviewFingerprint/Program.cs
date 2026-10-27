@@ -146,6 +146,11 @@ internal static class Program
                             return new FileRecord(Path.GetRelativePath(fullInput, file).Replace('\\', '/'),
                                 snapshot.Sha256, snapshot.Bytes);
                         }).ToArray();
+                    if (files.Length == 0)
+                    {
+                        throw new InvalidDataException("Cannot archive an empty evidence directory.");
+                    }
+
                     var record = new Manifest(1, id, DateTimeOffset.UtcNow, files);
                     Directory.CreateDirectory(Path.GetDirectoryName(fullOutput)!);
                     // Preserve an existing evidence manifest instead of silently replacing it.
@@ -163,7 +168,9 @@ internal static class Program
                     String manifestFile = Required(options, "manifest");
                     var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(manifestFile))
                         ?? throw new InvalidDataException("Invalid manifest.");
-                    if (manifest.SchemaVersion != 1 || manifest.Files is null)
+                    if (manifest.SchemaVersion != 1 || manifest.Files is null ||
+                        manifest.Files.Length == 0 || String.IsNullOrWhiteSpace(manifest.SubmissionId) ||
+                        manifest.RecordedUtc == default || manifest.RecordedUtc.Offset != TimeSpan.Zero)
                     {
                         throw new InvalidDataException("Unsupported or invalid manifest.");
                     }
