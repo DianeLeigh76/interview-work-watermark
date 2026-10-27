@@ -207,7 +207,7 @@ internal static class Program
                                 snapshot.Sha256.Equals(item.Record.Sha256, StringComparison.OrdinalIgnoreCase);
                         }
 
-                        Console.WriteLine($"{(matches ? "OK" : "CHANGED/MISSING")} {item.Relative}");
+                        Console.WriteLine($"{(matches ? "OK" : "CHANGED/MISSING")} {JsonSerializer.Serialize(item.Relative)}");
                         if (matches)
                         {
                             matched++;
@@ -224,7 +224,7 @@ internal static class Program
                         String relative = Path.GetRelativePath(root, file).Replace('\\', '/');
                         if (!expected.Contains(relative))
                         {
-                            Console.WriteLine($"EXTRA {relative}");
+                            Console.WriteLine($"EXTRA {JsonSerializer.Serialize(relative)}");
                             extras++;
                         }
                     }
