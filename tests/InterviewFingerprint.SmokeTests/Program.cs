@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using InterviewFingerprint.SmokeTests.Classes;
 using SkiaSharp;
 
@@ -205,7 +206,7 @@ internal static class Program
             (Int32 escapedExit, String escapedOutput) = Execute(application,
                 "check-archive", "--in", evidence, "--manifest", manifest);
             Require(escapedExit == 1 &&
-                escapedOutput.Contains("EXTRA \\"line\\\\nOK forged.txt\\"", StringComparison.Ordinal) &&
+                escapedOutput.Contains("EXTRA " + JsonSerializer.Serialize("line\nOK forged.txt"), StringComparison.Ordinal) &&
                 !escapedOutput.Contains("\nOK forged.txt", StringComparison.Ordinal),
                 "Evidence filenames must be escaped in verification logs: " + escapedOutput);
             File.Delete(misleading);
