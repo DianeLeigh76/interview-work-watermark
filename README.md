@@ -79,6 +79,7 @@ The `v0.2` source changes include:
 - Verification reports the lowest per-bit vote agreement and uses stricter thresholds. These are engineering heuristics, not measured error rates.
 - `code-fingerprint --in file.cs` uses a Roslyn lexer to create a syntax fingerprint that ignores ordinary whitespace/comments but **retains preprocessor directives and disabled source text**. Conditional-compilation changes are therefore not silently treated as identical.
 - `compare-code --a original.cs --b suspected.cs` returns token equality and five-token shingle Jaccard/containment similarity. Different identifiers, directives, disabled branches, and changed syntax still affect this; it is *not* semantic equivalence detection. Very short files are particularly unreliable evidence.
+- Code input is decoded with Unicode BOM detection; files without a BOM must contain valid UTF-8. Malformed UTF-8 is rejected rather than silently converted to replacement characters, which could conceal byte-level differences.
 - File hashing now streams file contents rather than loading entire files into memory.
 
 ### Example (.NET 10)

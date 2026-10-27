@@ -51,11 +51,20 @@ internal static class CodeAnalysis
         // cannot produce an exact hash and a syntax hash for different versions.
         Byte[] bytes = File.ReadAllBytes(file);
         String exact = Convert.ToHexString(SHA256.HashData(bytes));
-        using StreamReader reader = new StreamReader(new MemoryStream(bytes), Encoding.UTF8,
-            detectEncodingFromByteOrderMarks: true);
-        String source = reader.ReadToEnd();
+        String source = ReadSource(bytes);
         var tokens = Tokens(source);
         return new(exact, Digest(tokens), tokens.Length);
+    }
+
+    // Preserve BOM-aware decoding but do not silently replace malformed UTF-8
+    // bytes, which could make distinct source files share a syntax fingerprint.
+    private static String ReadSource(Byte[] bytes)
+    {
+        using StreamReader reader = new StreamReader(
+            new MemoryStream(bytes, writable: false),
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true),
+            detectEncodingFromByteOrderMarks: true);
+        return reader.ReadToEnd();
     }
 
     private static HashSet<String> Shingles(String[] tokens)
@@ -71,8 +80,8 @@ internal static class CodeAnalysis
 
     internal static ComparisonResult Compare(String a, String b)
     {
-        var first = Tokens(File.ReadAllText(a));
-        var second = Tokens(File.ReadAllText(b));
+        var first = Tokens(ReadSource(File.ReadAllBytes(a)));
+        var second = Tokens(ReadSource(File.ReadAllBytes(b)));
         Boolean identical = Digest(first) == Digest(second);
         // An empty or comment-only source file contains no code evidence.
         // Equality of two empty token streams must not be scored as 100% similarity.

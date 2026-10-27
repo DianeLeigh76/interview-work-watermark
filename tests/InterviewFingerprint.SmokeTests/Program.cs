@@ -156,6 +156,13 @@ internal static class Program
             bomCompareOutput.Contains("Syntax-identical: True", StringComparison.Ordinal),
             "UTF-8 BOM alone must not change syntax tokens: " + bomCompareOutput);
 
+        // Invalid UTF-8 must not be silently decoded into replacement characters
+        // that could make different byte sequences look syntax-identical.
+        String invalidUtf8 = Path.Combine(folder, "InvalidUtf8.cs");
+        File.WriteAllBytes(invalidUtf8, [99, 108, 97, 115, 115, 32, 255]);
+        RequireExit(application, 2, "code-fingerprint", "--in", invalidUtf8);
+        RequireExit(application, 2, "compare-code", "--a", invalidUtf8, "--b", withoutBom);
+
         // Preprocessor directives and disabled branches can change compiled behavior.
         // They must not be discarded along with ordinary comments and whitespace.
         String directiveA = Path.Combine(folder, "DirectiveA.cs");
