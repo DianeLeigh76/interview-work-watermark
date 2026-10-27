@@ -228,6 +228,18 @@ internal static class Program
         File.WriteAllText(noTimestampManifest, noTimestamp.ToJsonString());
         RequireExit(application, 2, "check-archive", "--in", evidence, "--manifest", noTimestampManifest);
 
+        // A manifest cannot silently carry unrecognized claims or metadata.
+        // The schema is versioned; unknown fields must be rejected, not ignored.
+        JsonNode extraProperty = JsonNode.Parse(originalManifestJson)!;
+        extraProperty["ForgedAttestation"] = "signed";
+        String extraPropertyManifest = Path.Combine(folder, "unknown-field.json");
+        File.WriteAllText(extraPropertyManifest, extraProperty.ToJsonString());
+        (Int32 extraPropertyExit, String extraPropertyOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", extraPropertyManifest);
+        Require(extraPropertyExit == 2 &&
+            !extraPropertyOutput.Contains("OK ", StringComparison.Ordinal),
+            "Unknown manifest properties must fail before any OK output: " + extraPropertyOutput);
+
         RequireExit(application, 2, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
         Require(File.ReadAllText(manifest) == originalManifestJson,
             "A second archive must not overwrite an existing evidence manifest");

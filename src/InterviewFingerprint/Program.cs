@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using SkiaSharp;
 
 namespace InterviewFingerprint;
@@ -171,7 +172,8 @@ internal static class Program
                 {
                     String input = Required(options, "in");
                     String manifestFile = Required(options, "manifest");
-                    var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(manifestFile))
+                    var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(manifestFile),
+                        new JsonSerializerOptions { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
                         ?? throw new InvalidDataException("Invalid manifest.");
                     if (manifest.SchemaVersion != 1 || manifest.Files is null ||
                         manifest.Files.Length == 0 || String.IsNullOrWhiteSpace(manifest.SubmissionId) ||
