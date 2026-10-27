@@ -116,6 +116,11 @@ internal static class Program
                     Console.WriteLine($"Shared five-token shingles (Jaccard): {result.Jaccard:P2}");
                     Console.WriteLine($"Containment of smaller shingle set: {result.Containment:P2}");
                     Console.WriteLine($"Tokens A/B: {result.TokenCountA}/{result.TokenCountB}");
+                    if (result.TokenCountA < 5 || result.TokenCountB < 5)
+                    {
+                        Console.WriteLine("WARNING: Too few tokens for reliable five-token shingle comparison.");
+                    }
+
                     Console.WriteLine("Similarity is supporting investigative evidence only, not proof of copying.");
                     return 0;
                 }
