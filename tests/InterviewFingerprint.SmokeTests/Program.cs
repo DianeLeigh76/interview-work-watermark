@@ -82,6 +82,17 @@ internal static class Program
         RequireExit(application, 2, "mark", "--in", input, "--out", marked, "--id", "submission-one");
         Require(File.ReadAllBytes(marked).SequenceEqual(originalMarkedBytes),
             "A second mark must not overwrite an existing output image");
+        // A newline in a user-supplied path must not forge another CLI log line.
+        if (!OperatingSystem.IsWindows())
+        {
+            String multilineOutput = Path.Combine(folder, "marked\\nOK forged.png".Replace("\\n", "\n"));
+            (Int32 multilineExit, String multilineLog) = Execute(application,
+                "mark", "--in", input, "--out", multilineOutput, "--id", "submission-one");
+            Require(multilineExit == 0 &&
+                multilineLog.Contains("Marked PNG: " + JsonSerializer.Serialize(multilineOutput), StringComparison.Ordinal) &&
+                !multilineLog.Contains("\nOK forged.png", StringComparison.Ordinal),
+                "Marked output path must be escaped in CLI logs: " + multilineLog);
+        }
         // Typos and duplicate switches must fail rather than silently change evidence settings.
         String typoOutput = Path.Combine(folder, "typo-marked.png");
         RequireExit(application, 2, "mark", "--in", input, "--out", typoOutput,
@@ -208,6 +219,16 @@ internal static class Program
         String manifest = Path.Combine(folder, "manifest.json");
         RequireExit(application, 0, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
         String originalManifestJson = File.ReadAllText(manifest);
+        if (!OperatingSystem.IsWindows())
+        {
+            String multilineManifest = Path.Combine(folder, "manifest\\nOK forged.json".Replace("\\n", "\n"));
+            (Int32 multilineExit, String multilineLog) = Execute(application,
+                "archive", "--in", evidence, "--out", multilineManifest, "--id", "submission-one");
+            Require(multilineExit == 0 &&
+                multilineLog.Contains(JsonSerializer.Serialize(multilineManifest), StringComparison.Ordinal) &&
+                !multilineLog.Contains("\nOK forged.json", StringComparison.Ordinal),
+                "Archive output path must be escaped in CLI logs: " + multilineLog);
+        }
 
         // Malformed manifests must not be accepted as successful evidence checks.
         JsonNode noFiles = JsonNode.Parse(originalManifestJson)!;

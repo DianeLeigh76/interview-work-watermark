@@ -44,7 +44,7 @@ internal static class Program
                     {
                         encoded.SaveTo(stream);
                     }
-                    Console.WriteLine($"Marked PNG: {output}");
+                    Console.WriteLine($"Marked PNG: {JsonSerializer.Serialize(output)}");
                     Console.WriteLine($"SHA-256: {HashFile(output)}");
                     Console.WriteLine("Keep the secret key private. Test verification on the delivered copy.");
                     return 0;
@@ -164,7 +164,7 @@ internal static class Program
                     {
                         JsonSerializer.Serialize(stream, record, new JsonSerializerOptions { WriteIndented = true });
                     }
-                    Console.WriteLine($"Archived {files.Length} file hashes: {output}");
+                    Console.WriteLine($"Archived {files.Length} file hashes: {JsonSerializer.Serialize(output)}");
                     Console.WriteLine("Preserve original files, email headers, and a trustworthy external timestamp.");
                     return 0;
                 }
@@ -257,7 +257,7 @@ internal static class Program
         }
         catch (Exception problem)
         {
-            Console.Error.WriteLine($"Error: {problem.Message}");
+            Console.Error.WriteLine($"Error: {JsonSerializer.Serialize(problem.Message)}");
             return 2;
         }
     }
