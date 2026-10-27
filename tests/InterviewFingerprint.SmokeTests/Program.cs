@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using InterviewFingerprint.SmokeTests.Classes;
 using SkiaSharp;
 
@@ -163,6 +164,14 @@ internal static class Program
             disabledOutput.Contains("Syntax-identical: False", StringComparison.Ordinal),
             "Different disabled branches must not have identical syntax fingerprints: " + disabledOutput);
 
+        // An empty directory is not a meaningful evidence submission.
+        String emptyEvidence = Path.Combine(folder, "empty-evidence");
+        Directory.CreateDirectory(emptyEvidence);
+        String emptyManifest = Path.Combine(folder, "empty-evidence.json");
+        RequireExit(application, 2, "archive", "--in", emptyEvidence,
+            "--out", emptyManifest, "--id", "submission-one");
+        Require(!File.Exists(emptyManifest), "Empty archive must not create a manifest");
+
         String evidence = Path.Combine(folder, "submission");
         Directory.CreateDirectory(evidence);
         String submittedFile = Path.Combine(evidence, "submission.txt");
@@ -171,6 +180,26 @@ internal static class Program
         String manifest = Path.Combine(folder, "manifest.json");
         RequireExit(application, 0, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
         String originalManifestJson = File.ReadAllText(manifest);
+
+        // Malformed manifests must not be accepted as successful evidence checks.
+        JsonNode noFiles = JsonNode.Parse(originalManifestJson)!;
+        noFiles["Files"] = new JsonArray();
+        String noFilesManifest = Path.Combine(folder, "no-files.json");
+        File.WriteAllText(noFilesManifest, noFiles.ToJsonString());
+        RequireExit(application, 2, "check-archive", "--in", evidence, "--manifest", noFilesManifest);
+
+        JsonNode noId = JsonNode.Parse(originalManifestJson)!;
+        noId["SubmissionId"] = "";
+        String noIdManifest = Path.Combine(folder, "no-id.json");
+        File.WriteAllText(noIdManifest, noId.ToJsonString());
+        RequireExit(application, 2, "check-archive", "--in", evidence, "--manifest", noIdManifest);
+
+        JsonNode noTimestamp = JsonNode.Parse(originalManifestJson)!;
+        noTimestamp["RecordedUtc"] = "0001-01-01T00:00:00+00:00";
+        String noTimestampManifest = Path.Combine(folder, "no-timestamp.json");
+        File.WriteAllText(noTimestampManifest, noTimestamp.ToJsonString());
+        RequireExit(application, 2, "check-archive", "--in", evidence, "--manifest", noTimestampManifest);
+
         RequireExit(application, 2, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
         Require(File.ReadAllText(manifest) == originalManifestJson,
             "A second archive must not overwrite an existing evidence manifest");
