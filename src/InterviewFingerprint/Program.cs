@@ -172,7 +172,9 @@ internal static class Program
                 {
                     String input = Required(options, "in");
                     String manifestFile = Required(options, "manifest");
-                    var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(manifestFile),
+                    using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifestFile));
+                    RejectDuplicateJsonProperties(document.RootElement);
+                    var manifest = document.RootElement.Deserialize<Manifest>(
                         new JsonSerializerOptions { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
                         ?? throw new InvalidDataException("Invalid manifest.");
                     if (manifest.SchemaVersion != 1 || manifest.Files is null ||
@@ -257,6 +259,32 @@ internal static class Program
         {
             Console.Error.WriteLine($"Error: {problem.Message}");
             return 2;
+        }
+    }
+
+    // Duplicate JSON keys can be interpreted differently by different parsers.
+    // Reject them at every level before trusting any evidence metadata.
+    private static void RejectDuplicateJsonProperties(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            HashSet<String> names = new HashSet<String>(StringComparer.Ordinal);
+            foreach (JsonProperty property in element.EnumerateObject())
+            {
+                if (!names.Add(property.Name))
+                {
+                    throw new InvalidDataException("Manifest contains duplicate JSON property names.");
+                }
+
+                RejectDuplicateJsonProperties(property.Value);
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement item in element.EnumerateArray())
+            {
+                RejectDuplicateJsonProperties(item);
+            }
         }
     }
 

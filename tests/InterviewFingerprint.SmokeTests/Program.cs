@@ -266,6 +266,31 @@ internal static class Program
         Require(badLengthExit == 2 && !badLengthOutput.Contains("OK ", StringComparison.Ordinal),
             "Negative file length must fail before reporting verified files: " + badLengthOutput);
 
+        // Duplicate JSON properties are ambiguous across different parsers.
+        // Reject both top-level and nested duplicates before any OK results.
+        String duplicateRootJson = originalManifestJson.Replace(
+            "\"SchemaVersion\": 1,", "\"SchemaVersion\": 1,\n  \"SchemaVersion\": 1,",
+            StringComparison.Ordinal);
+        Require(duplicateRootJson != originalManifestJson, "Expected schema version in manifest");
+        String duplicateRootManifest = Path.Combine(folder, "duplicate-root.json");
+        File.WriteAllText(duplicateRootManifest, duplicateRootJson);
+        (Int32 duplicateRootExit, String duplicateRootOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", duplicateRootManifest);
+        Require(duplicateRootExit == 2 &&
+            !duplicateRootOutput.Contains("OK ", StringComparison.Ordinal),
+            "Duplicate root JSON keys must fail before OK output: " + duplicateRootOutput);
+
+        String duplicateNestedJson = originalManifestJson.Replace(
+            "\"Bytes\": 8", "\"Bytes\": 8, \"Bytes\": 8", StringComparison.Ordinal);
+        Require(duplicateNestedJson != originalManifestJson, "Expected 8-byte test file");
+        String duplicateNestedManifest = Path.Combine(folder, "duplicate-nested.json");
+        File.WriteAllText(duplicateNestedManifest, duplicateNestedJson);
+        (Int32 duplicateNestedExit, String duplicateNestedOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", duplicateNestedManifest);
+        Require(duplicateNestedExit == 2 &&
+            !duplicateNestedOutput.Contains("OK ", StringComparison.Ordinal),
+            "Duplicate nested JSON keys must fail before OK output: " + duplicateNestedOutput);
+
         // File names containing newlines must not be able to forge separate OK lines
         // in captured verification logs (valid file names on Unix systems).
         if (!OperatingSystem.IsWindows())
