@@ -85,7 +85,9 @@ internal static class CodeAnalysis
         var y = Shingles(second);
         if (x.Count == 0 || y.Count == 0)
         {
-            return new(identical, identical ? 1 : 0, identical ? 1 : 0, first.Length, second.Length);
+            // With fewer than five tokens there are no shingles to compare.
+            // Syntax equality is reported separately; do not invent 100% similarity.
+            return new(identical, 0, 0, first.Length, second.Length);
         }
         Int32 common = x.Intersect(y).Count();
         return new(identical, (Double)common / (x.Count + y.Count - common),

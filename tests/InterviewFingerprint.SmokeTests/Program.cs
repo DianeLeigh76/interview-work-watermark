@@ -177,6 +177,21 @@ internal static class Program
             blankOutput.Contains("WARNING: Too few tokens", StringComparison.Ordinal),
             "Empty code must not receive a perfect similarity score: " + blankOutput);
 
+        // Identical short files have no five-token shingles. Syntax equality
+        // must not be misrepresented as 100% measured shingle similarity.
+        String shortCodeA = Path.Combine(folder, "ShortA.cs");
+        String shortCodeB = Path.Combine(folder, "ShortB.cs");
+        File.WriteAllText(shortCodeA, "class A {}");
+        File.WriteAllText(shortCodeB, "class A {}");
+        (Int32 shortExit, String shortOutput) = Execute(application,
+            "compare-code", "--a", shortCodeA, "--b", shortCodeB);
+        Require(shortExit == 0 &&
+            shortOutput.Contains("Syntax-identical: True", StringComparison.Ordinal) &&
+            shortOutput.Contains("Jaccard): 0", StringComparison.Ordinal) &&
+            shortOutput.Contains("Containment of smaller shingle set: 0", StringComparison.Ordinal) &&
+            shortOutput.Contains("WARNING: Too few tokens", StringComparison.Ordinal),
+            "Short identical code must not claim a measured shingle match: " + shortOutput);
+
         // An empty directory is not a meaningful evidence submission.
         String emptyEvidence = Path.Combine(folder, "empty-evidence");
         Directory.CreateDirectory(emptyEvidence);
