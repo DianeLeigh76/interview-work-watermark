@@ -196,6 +196,21 @@ internal static class Program
         Require(badLengthExit == 2 && !badLengthOutput.Contains("OK ", StringComparison.Ordinal),
             "Negative file length must fail before reporting verified files: " + badLengthOutput);
 
+        // File names containing newlines must not be able to forge separate OK lines
+        // in captured verification logs (valid file names on Unix systems).
+        if (!OperatingSystem.IsWindows())
+        {
+            String misleading = Path.Combine(evidence, "line\\nOK forged.txt".Replace("\\n", "\n"));
+            File.WriteAllText(misleading, "unrecorded");
+            (Int32 escapedExit, String escapedOutput) = Execute(application,
+                "check-archive", "--in", evidence, "--manifest", manifest);
+            Require(escapedExit == 1 &&
+                escapedOutput.Contains("EXTRA \\"line\\\\nOK forged.txt\\"", StringComparison.Ordinal) &&
+                !escapedOutput.Contains("\nOK forged.txt", StringComparison.Ordinal),
+                "Evidence filenames must be escaped in verification logs: " + escapedOutput);
+            File.Delete(misleading);
+        }
+
         String extra = Path.Combine(evidence, "not-submitted.txt");
         File.WriteAllText(extra, "extra");
         RequireExit(application, 1, "check-archive", "--in", evidence, "--manifest", manifest);
