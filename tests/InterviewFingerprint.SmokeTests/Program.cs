@@ -164,6 +164,19 @@ internal static class Program
             disabledOutput.Contains("Syntax-identical: False", StringComparison.Ordinal),
             "Different disabled branches must not have identical syntax fingerprints: " + disabledOutput);
 
+        // Two files with no actual C# tokens are not 100%-similar code evidence.
+        String blankCode = Path.Combine(folder, "Blank.cs");
+        String commentsOnly = Path.Combine(folder, "CommentsOnly.cs");
+        File.WriteAllText(blankCode, String.Empty);
+        File.WriteAllText(commentsOnly, "// Nothing executable here.");
+        (Int32 blankExit, String blankOutput) = Execute(application,
+            "compare-code", "--a", blankCode, "--b", commentsOnly);
+        Require(blankExit == 0 &&
+            blankOutput.Contains("Syntax-identical: True", StringComparison.Ordinal) &&
+            blankOutput.Contains("Jaccard): 0", StringComparison.Ordinal) &&
+            blankOutput.Contains("WARNING: Too few tokens", StringComparison.Ordinal),
+            "Empty code must not receive a perfect similarity score: " + blankOutput);
+
         // An empty directory is not a meaningful evidence submission.
         String emptyEvidence = Path.Combine(folder, "empty-evidence");
         Directory.CreateDirectory(emptyEvidence);
