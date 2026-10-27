@@ -74,6 +74,13 @@ internal static class CodeAnalysis
         var first = Tokens(File.ReadAllText(a));
         var second = Tokens(File.ReadAllText(b));
         Boolean identical = Digest(first) == Digest(second);
+        // An empty or comment-only source file contains no code evidence.
+        // Equality of two empty token streams must not be scored as 100% similarity.
+        if (first.Length == 0 || second.Length == 0)
+        {
+            return new(identical, 0, 0, first.Length, second.Length);
+        }
+
         var x = Shingles(first);
         var y = Shingles(second);
         if (x.Count == 0 || y.Count == 0)
