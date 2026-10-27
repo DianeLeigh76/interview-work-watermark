@@ -402,15 +402,19 @@ internal static class Program
 
         process.StartInfo.Environment["IFP_SECRET"] = TestSecret;
         process.Start();
-        String stdout = process.StandardOutput.ReadToEnd();
-        String stderr = process.StandardError.ReadToEnd();
+        // Drain both redirected streams while the process runs. Reading them
+        // synchronously before the timeout can hang forever on a stuck CLI.
+        Task<String> stdout = process.StandardOutput.ReadToEndAsync();
+        Task<String> stderr = process.StandardError.ReadToEndAsync();
         if (!process.WaitForExit(60000))
         {
             process.Kill(entireProcessTree: true);
+            process.WaitForExit();
             throw new TimeoutException("CLI process exceeded 60 seconds.");
         }
 
-        return (process.ExitCode, stdout + stderr);
+        return (process.ExitCode,
+            stdout.GetAwaiter().GetResult() + stderr.GetAwaiter().GetResult());
     }
 
     private static void Require(Boolean condition, String message)
