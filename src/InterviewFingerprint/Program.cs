@@ -175,6 +175,13 @@ internal static class Program
                 {
                     String input = Required(options, "in");
                     String manifestFile = Required(options, "manifest");
+                    if (!Directory.Exists(input))
+                    {
+                        throw new ArgumentException("--in must be an existing directory.");
+                    }
+
+                    // Reject a linked evidence root before any manifest entry can be reported as OK.
+                    EvidenceFiles.RejectLinkedAncestors(input);
                     using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifestFile));
                     RejectDuplicateJsonProperties(document.RootElement);
                     var manifest = document.RootElement.Deserialize<Manifest>(
