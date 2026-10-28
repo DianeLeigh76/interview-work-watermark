@@ -144,6 +144,9 @@ internal static class Program
                     {
                         throw new ArgumentException("Output must be outside the source directory.");
                     }
+                    // An output path through a linked parent can alias the source tree.
+                    // Reject it before hashing so the manifest cannot become part of its own evidence.
+                    EvidenceFiles.RejectLinkedAncestors(Path.GetDirectoryName(fullOutput)!);
                     var files = EvidenceFiles.Enumerate(fullInput)
                         .Order(StringComparer.Ordinal)
                         .Select(file =>

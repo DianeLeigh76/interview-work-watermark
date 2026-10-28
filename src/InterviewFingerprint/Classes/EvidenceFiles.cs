@@ -82,7 +82,7 @@ internal static class EvidenceFiles
         return file;
     }
 
-    private static void RejectLinkedAncestors(String path)
+    internal static void RejectLinkedAncestors(String path)
     {
         String current = Path.GetFullPath(path);
         while (true)
