@@ -11,6 +11,12 @@ internal static class RobustnessMatrix
 {
     internal static void Run(String application, String folder, String reportPath, String secret)
     {
+        // Fail before expensive diagnostics if the requested report already exists.
+        if (File.Exists(reportPath))
+        {
+            throw new IOException("Refusing to overwrite an existing diagnostic report: " + reportPath);
+        }
+
         List<Dictionary<String, Object>> rows = new List<Dictionary<String, Object>>();
 
         String[] patterns =
@@ -132,8 +138,12 @@ internal static class RobustnessMatrix
             Description = "Synthetic diagnostic results; not calibrated error rates or forensic validation.",
             Rows = rows
         };
-        File.WriteAllText(reportPath, JsonSerializer.Serialize(report,
-            new JsonSerializerOptions { WriteIndented = true }));
+        // CreateNew also guards against another process creating the report
+        // while diagnostics were running.
+        using (FileStream stream = new FileStream(reportPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            JsonSerializer.Serialize(stream, report, new JsonSerializerOptions { WriteIndented = true });
+        }
 
         Int32 detected = rows.Count(row => (Boolean)row["Detected"]);
         Int32 negativeControls = rows.Count(row => !(Boolean)row["ExpectedWatermark"]);
