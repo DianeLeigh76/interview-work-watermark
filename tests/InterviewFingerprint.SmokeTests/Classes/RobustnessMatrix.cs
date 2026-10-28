@@ -149,7 +149,7 @@ internal static class RobustnessMatrix
         Int32 negativeControls = rows.Count(row => !(Boolean)row["ExpectedWatermark"]);
         Int32 falsePositives = rows.Count(row => !(Boolean)row["ExpectedWatermark"] && (Boolean)row["Detected"]);
         Console.WriteLine($"DIAGNOSTIC: {detected}/{rows.Count} detected; " +
-            $"{falsePositives}/{negativeControls} synthetic negative controls detected; report: {reportPath}");
+            $"{falsePositives}/{negativeControls} synthetic negative controls detected; report: {JsonSerializer.Serialize(reportPath)}");
         foreach (IGrouping<String, Dictionary<String, Object>> group in
             rows.GroupBy(row => (String)row["Transform"]).OrderBy(group => group.Key, StringComparer.Ordinal))
         {
