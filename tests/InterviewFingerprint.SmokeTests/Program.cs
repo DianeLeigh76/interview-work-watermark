@@ -243,6 +243,19 @@ internal static class Program
         String manifest = Path.Combine(folder, "manifest.json");
         RequireExit(application, 0, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
         String originalManifestJson = File.ReadAllText(manifest);
+        // A symlinked output parent can point back into the evidence directory
+        // even though the lexical --out path appears to be outside it.
+        if (!OperatingSystem.IsWindows())
+        {
+            String linkedOutputParent = Path.Combine(folder, "linked-archive-output");
+            Directory.CreateSymbolicLink(linkedOutputParent, evidence);
+            String aliasedOutput = Path.Combine(linkedOutputParent, "aliased-manifest.json");
+            RequireExit(application, 2, "archive", "--in", evidence,
+                "--out", aliasedOutput, "--id", "submission-one");
+            Require(!File.Exists(Path.Combine(evidence, "aliased-manifest.json")),
+                "Archive must not write a manifest through a linked output parent");
+            Directory.Delete(linkedOutputParent);
+        }
         if (!OperatingSystem.IsWindows())
         {
             String multilineManifest = Path.Combine(folder, "manifest\\nOK forged.json".Replace("\\n", "\n"));
