@@ -129,7 +129,7 @@ Smoke tests cover keyed PNG marking/verification, rejection of wrong submission 
 
 **Fingerprint compatibility:** Syntax fingerprints generated before the 2026-10-26 preprocessor fix did not include directives or disabled text. Recompute earlier syntax fingerprints before comparing them with newer results; differing algorithm versions are not evidence of source changes.
 
-**Output safety:** `mark` and `archive` now refuse to replace existing output files. Choose a new output filename for each run, and preserve the originally submitted version and manifest.
+**Output safety:** `mark` and `archive` now refuse to replace existing output files. `archive` also rejects output paths whose existing parent directories are symbolic links or junctions, preventing a linked output alias from placing the manifest inside its own evidence directory. This is a preflight check, not protection against another process changing filesystem links during the operation. Choose a new output filename for each run, and preserve the originally submitted version and manifest.
 
 **Additional verification safeguards (2026-10-26):** Archive creation rejects empty submission directories. Verification rejects manifests with no file entries, blank submission IDs, or missing/non-UTC recording timestamps. These are structural checks, **not authentication**: a fabricated but well-formed manifest can still pass when paired with matching files. File paths printed by `check-archive` are JSON-quoted and control characters are escaped, preventing newline-containing filenames from forging separate `OK` or `EXTRA` log lines. Consumers parsing the command output should account for the quoted paths.
 
