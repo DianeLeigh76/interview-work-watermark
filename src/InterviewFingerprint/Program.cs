@@ -151,7 +151,10 @@ internal static class Program
                         .Order(StringComparer.Ordinal)
                         .Select(file =>
                         {
+                            // Narrow the window for a file being swapped to a link after enumeration.
+                            EvidenceFiles.RejectLinkedAncestors(file);
                             var snapshot = HashFileAndLength(file);
+                            EvidenceFiles.RejectLinkedAncestors(file);
                             return new FileRecord(Path.GetRelativePath(fullInput, file).Replace('\\', '/'),
                                 snapshot.Sha256, snapshot.Bytes);
                         }).ToArray();
@@ -228,7 +231,9 @@ internal static class Program
                         Boolean matches = false;
                         if (File.Exists(item.File))
                         {
+                            EvidenceFiles.RejectLinkedAncestors(item.File);
                             var snapshot = HashFileAndLength(item.File);
+                            EvidenceFiles.RejectLinkedAncestors(item.File);
                             matches = snapshot.Bytes == item.Record.Bytes &&
                                 snapshot.Sha256.Equals(item.Record.Sha256, StringComparison.OrdinalIgnoreCase);
                         }
