@@ -339,14 +339,18 @@ internal static class RobustnessMatrix
 
         process.StartInfo.Environment["IFP_SECRET"] = secret;
         process.Start();
-        String stdout = process.StandardOutput.ReadToEnd();
-        String stderr = process.StandardError.ReadToEnd();
+        // Drain both redirected streams concurrently so a blocked child process
+        // cannot prevent the timeout from being enforced.
+        Task<String> stdout = process.StandardOutput.ReadToEndAsync();
+        Task<String> stderr = process.StandardError.ReadToEndAsync();
         if (!process.WaitForExit(120000))
         {
             process.Kill(entireProcessTree: true);
+            process.WaitForExit();
             throw new TimeoutException("Diagnostic command exceeded 120 seconds.");
         }
 
-        return (process.ExitCode, stdout + stderr);
+        return (process.ExitCode,
+            stdout.GetAwaiter().GetResult() + stderr.GetAwaiter().GetResult());
     }
 }
