@@ -35,7 +35,24 @@ internal static class Program
             RunAll(application, folder);
             if (arguments.Length == 3)
             {
-                RobustnessMatrix.Run(application, folder, Path.GetFullPath(arguments[2]), TestSecret);
+                String reportPath = Path.GetFullPath(arguments[2]);
+                RobustnessMatrix.Run(application, folder, reportPath, TestSecret);
+
+                // A second run must refuse to replace the completed report.
+                Byte[] originalReport = File.ReadAllBytes(reportPath);
+                Boolean overwriteRejected = false;
+                try
+                {
+                    RobustnessMatrix.Run(application, folder, reportPath, TestSecret);
+                }
+                catch (IOException problem) when (problem.Message.StartsWith(
+                    "Refusing to overwrite an existing diagnostic report:", StringComparison.Ordinal))
+                {
+                    overwriteRejected = true;
+                }
+
+                Require(overwriteRejected && File.ReadAllBytes(reportPath).SequenceEqual(originalReport),
+                    "Diagnostic report must remain unchanged after a repeated run");
             }
 
             Console.WriteLine("PASS: all CLI smoke tests");
