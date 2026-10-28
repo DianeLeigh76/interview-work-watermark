@@ -303,6 +303,13 @@ internal static class Program
             "A second archive must not overwrite an existing evidence manifest");
         RequireExit(application, 0, "check-archive", "--in", evidence + Path.DirectorySeparatorChar, "--manifest", manifest);
 
+        // A missing evidence root must fail before any success records are printed.
+        String missingEvidence = Path.Combine(folder, "missing-evidence");
+        (Int32 missingExit, String missingOutput) = Execute(application,
+            "check-archive", "--in", missingEvidence, "--manifest", manifest);
+        Require(missingExit == 2 && !missingOutput.Contains("OK ", StringComparison.Ordinal),
+            "Missing evidence root must not produce successful checks: " + missingOutput);
+
         // Invalid manifest metadata must fail before any file is reported as OK.
         String badHashManifest = Path.Combine(folder, "bad-hash.json");
         String badHashJson = originalManifestJson.Replace("\"Sha256\": \"", "\"Sha256\": \"Z",
