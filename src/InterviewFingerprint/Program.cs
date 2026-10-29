@@ -413,7 +413,7 @@ internal static class Program
     private static String Secret()
     {
         String? secret = Environment.GetEnvironmentVariable("IFP_SECRET");
-        if (String.IsNullOrWhiteSpace(secret))
+        if (String.IsNullOrWhiteSpace(secret) || secret.Length < 16)
         {
             throw new ArgumentException("Set IFP_SECRET to a private random secret (at least 16 characters).");
         }
