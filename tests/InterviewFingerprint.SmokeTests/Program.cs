@@ -95,6 +95,17 @@ internal static class Program
 
         RequireExit(application, 0, "mark", "--in", input, "--out", marked, "--id", "submission-one", "--strength", "48");
         Require(File.Exists(marked), "mark did not produce a PNG");
+        // A weak environment secret must fail before creating a marked file.
+        String shortSecretOutput = Path.Combine(folder, "short-secret.png");
+        (Int32 shortSecretExit, String shortSecretLog) = ExecuteWithSecret(application,
+            "too-short", "mark", "--in", input, "--out", shortSecretOutput, "--id", "submission-one");
+        Require(shortSecretExit == 2 &&
+            shortSecretLog.Contains("at least 16 characters", StringComparison.Ordinal) &&
+            !File.Exists(shortSecretOutput),
+            "Short secrets must be rejected without creating an image: " + shortSecretLog);
+        Require(ExecuteWithSecret(application, "too-short",
+            "verify", "--in", marked, "--id", "submission-one").ExitCode == 2,
+            "Short secrets must also be rejected by verification");
         Byte[] originalMarkedBytes = File.ReadAllBytes(marked);
         RequireExit(application, 2, "mark", "--in", input, "--out", marked, "--id", "submission-one");
         Require(File.ReadAllBytes(marked).SequenceEqual(originalMarkedBytes),
@@ -513,6 +524,12 @@ internal static class Program
 
     private static (Int32 ExitCode, String Output) Execute(String application, params String[] arguments)
     {
+        return ExecuteWithSecret(application, TestSecret, arguments);
+    }
+
+    private static (Int32 ExitCode, String Output) ExecuteWithSecret(
+        String application, String secret, params String[] arguments)
+    {
         using Process process = new Process();
         process.StartInfo = new ProcessStartInfo("dotnet")
         {
@@ -526,7 +543,7 @@ internal static class Program
             process.StartInfo.ArgumentList.Add(argument);
         }
 
-        process.StartInfo.Environment["IFP_SECRET"] = TestSecret;
+        process.StartInfo.Environment["IFP_SECRET"] = secret;
         process.Start();
         // Drain both redirected streams while the process runs. Reading them
         // synchronously before the timeout can hang forever on a stuck CLI.
