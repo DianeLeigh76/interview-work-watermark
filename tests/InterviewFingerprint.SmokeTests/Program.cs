@@ -180,6 +180,33 @@ internal static class Program
         RequireExit(application, 2, "code-fingerprint", "--in", invalidUtf8);
         RequireExit(application, 2, "compare-code", "--a", invalidUtf8, "--b", withoutBom);
 
+        // BOM-marked UTF-16/UTF-32 are supported, but malformed surrogate/code
+        // point sequences must fail rather than silently becoming replacement text.
+        String utf16 = Path.Combine(folder, "Utf16.cs");
+        String utf32 = Path.Combine(folder, "Utf32.cs");
+        File.WriteAllText(utf16, bomSource,
+            new UnicodeEncoding(bigEndian: false, byteOrderMark: true, throwOnInvalidBytes: true));
+        File.WriteAllText(utf32, bomSource,
+            new UTF32Encoding(bigEndian: false, byteOrderMark: true, throwOnInvalidCharacters: true));
+        foreach (String encodedFile in new[] { utf16, utf32 })
+        {
+            (Int32 encodedExit, String encodedOutput) = Execute(application,
+                "compare-code", "--a", encodedFile, "--b", withoutBom);
+            Require(encodedExit == 0 &&
+                encodedOutput.Contains("Syntax-identical: True", StringComparison.Ordinal),
+                "Valid BOM-marked Unicode must preserve syntax tokens: " + encodedOutput);
+        }
+
+        String invalidUtf16 = Path.Combine(folder, "InvalidUtf16.cs");
+        File.WriteAllBytes(invalidUtf16, [0xFF, 0xFE, 0x00, 0xD8]);
+        String invalidUtf32 = Path.Combine(folder, "InvalidUtf32.cs");
+        File.WriteAllBytes(invalidUtf32, [0xFF, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x11, 0x00]);
+        foreach (String invalidFile in new[] { invalidUtf16, invalidUtf32 })
+        {
+            RequireExit(application, 2, "code-fingerprint", "--in", invalidFile);
+            RequireExit(application, 2, "compare-code", "--a", invalidFile, "--b", withoutBom);
+        }
+
         // Preprocessor directives and disabled branches can change compiled behavior.
         // They must not be discarded along with ordinary comments and whitespace.
         String directiveA = Path.Combine(folder, "DirectiveA.cs");

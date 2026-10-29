@@ -56,15 +56,41 @@ internal static class CodeAnalysis
         return new(exact, Digest(tokens), tokens.Length);
     }
 
-    // Preserve BOM-aware decoding but do not silently replace malformed UTF-8
-    // bytes, which could make distinct source files share a syntax fingerprint.
+    // Decode BOM-marked UTF-8, UTF-16 and UTF-32 strictly. StreamReader's
+    // automatic BOM detection can use replacement fallbacks for UTF-16/32,
+    // making distinct malformed files appear syntax-identical.
     private static String ReadSource(Byte[] bytes)
     {
-        using StreamReader reader = new StreamReader(
-            new MemoryStream(bytes, writable: false),
-            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true),
-            detectEncodingFromByteOrderMarks: true);
-        return reader.ReadToEnd();
+        Encoding encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+        Int32 bomLength = 0;
+        if (bytes.Length >= 4 && bytes[0] == 0x00 && bytes[1] == 0x00 &&
+            bytes[2] == 0xFE && bytes[3] == 0xFF)
+        {
+            encoding = new UTF32Encoding(bigEndian: true, byteOrderMark: true, throwOnInvalidCharacters: true);
+            bomLength = 4;
+        }
+        else if (bytes.Length >= 4 && bytes[0] == 0xFF && bytes[1] == 0xFE &&
+            bytes[2] == 0x00 && bytes[3] == 0x00)
+        {
+            encoding = new UTF32Encoding(bigEndian: false, byteOrderMark: true, throwOnInvalidCharacters: true);
+            bomLength = 4;
+        }
+        else if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+        {
+            bomLength = 3;
+        }
+        else if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+        {
+            encoding = new UnicodeEncoding(bigEndian: true, byteOrderMark: true, throwOnInvalidBytes: true);
+            bomLength = 2;
+        }
+        else if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+        {
+            encoding = new UnicodeEncoding(bigEndian: false, byteOrderMark: true, throwOnInvalidBytes: true);
+            bomLength = 2;
+        }
+
+        return encoding.GetString(bytes, bomLength, bytes.Length - bomLength);
     }
 
     private static HashSet<String> Shingles(String[] tokens)
