@@ -110,6 +110,19 @@ internal static class Program
                 !multilineLog.Contains("\nOK forged.png", StringComparison.Ordinal),
                 "Marked output path must be escaped in CLI logs: " + multilineLog);
         }
+        // A linked output directory must not redirect a marked image into
+        // an unintended location (same rule as archive manifests).
+        if (!OperatingSystem.IsWindows())
+        {
+            String linkedMarkParent = Path.Combine(folder, "linked-mark-output");
+            Directory.CreateSymbolicLink(linkedMarkParent, folder);
+            String linkedMarkOutput = Path.Combine(linkedMarkParent, "linked-mark.png");
+            RequireExit(application, 2, "mark", "--in", input, "--out", linkedMarkOutput,
+                "--id", "submission-one");
+            Require(!File.Exists(Path.Combine(folder, "linked-mark.png")),
+                "Mark must not write through a symbolic-link output parent");
+        }
+
         // Typos and duplicate switches must fail rather than silently change evidence settings.
         String typoOutput = Path.Combine(folder, "typo-marked.png");
         RequireExit(application, 2, "mark", "--in", input, "--out", typoOutput,

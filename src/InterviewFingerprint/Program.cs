@@ -35,9 +35,13 @@ internal static class Program
                     String id = Required(options, "id");
                     Double strength = GetStrength(options);
                     CheckDistinct(input, output);
+                    String outputDirectory = Path.GetDirectoryName(Path.GetFullPath(output))!;
+                    // Do not silently place a marked image through a linked output parent.
+                    EvidenceFiles.RejectLinkedAncestors(outputDirectory);
                     using SKBitmap image = SKBitmap.Decode(input) ?? throw new InvalidDataException("Unable to decode input image.");
                     Watermark.Mark(image, Watermark.Payload(key, id), strength);
-                    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
+                    Directory.CreateDirectory(outputDirectory);
+                    EvidenceFiles.RejectLinkedAncestors(outputDirectory);
                     using (SKImage marked = SKImage.FromBitmap(image))
                     using (SKData encoded = marked.Encode(SKEncodedImageFormat.Png, 100))
                     using (FileStream stream = new FileStream(output, FileMode.CreateNew, FileAccess.Write, FileShare.None))
