@@ -169,6 +169,9 @@ internal static class Program
 
                     var record = new Manifest(1, id, DateTimeOffset.UtcNow, files);
                     Directory.CreateDirectory(Path.GetDirectoryName(fullOutput)!);
+                    // Recheck after creating parents: a linked directory could otherwise
+                    // redirect the manifest into the evidence tree during hashing.
+                    EvidenceFiles.RejectLinkedAncestors(Path.GetDirectoryName(fullOutput)!);
                     // Preserve an existing evidence manifest instead of silently replacing it.
                     using (FileStream stream = new FileStream(fullOutput, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                     {
