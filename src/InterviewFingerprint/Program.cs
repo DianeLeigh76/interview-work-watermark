@@ -155,7 +155,7 @@ internal static class Program
                             EvidenceFiles.RejectLinkedAncestors(file);
                             var snapshot = HashFileAndLength(file);
                             EvidenceFiles.RejectLinkedAncestors(file);
-                            return new FileRecord(Path.GetRelativePath(fullInput, file).Replace('\\', '/'),
+                            return new FileRecord(EvidenceFiles.ToManifestPath(fullInput, file),
                                 snapshot.Sha256, snapshot.Bytes);
                         }).ToArray();
                     if (files.Length == 0)
@@ -215,7 +215,7 @@ internal static class Program
                         }
 
                         String file = EvidenceFiles.Resolve(root, entry.Path);
-                        String relative = Path.GetRelativePath(root, file).Replace('\\', '/');
+                        String relative = EvidenceFiles.ToManifestPath(root, file);
                         if (!expected.Add(relative))
                         {
                             throw new InvalidDataException("Manifest contains duplicate file paths.");
@@ -223,6 +223,11 @@ internal static class Program
 
                         validated.Add((file, relative, entry));
                     }
+
+                    // Validate the complete filesystem snapshot, including extra names and
+                    // links, before printing any successful verification records.
+                    String[] actualPaths = EvidenceFiles.Enumerate(root)
+                        .Select(file => EvidenceFiles.ToManifestPath(root, file)).ToArray();
 
                     Int32 matched = 0;
                     Int32 errors = 0;
@@ -250,9 +255,8 @@ internal static class Program
                     }
 
                     Int32 extras = 0;
-                    foreach (String file in EvidenceFiles.Enumerate(root))
+                    foreach (String relative in actualPaths)
                     {
-                        String relative = Path.GetRelativePath(root, file).Replace('\\', '/');
                         if (!expected.Contains(relative))
                         {
                             Console.WriteLine($"EXTRA {JsonSerializer.Serialize(relative)}");

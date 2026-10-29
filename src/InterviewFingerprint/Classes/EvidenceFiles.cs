@@ -39,6 +39,31 @@ internal static class EvidenceFiles
         return files.OrderBy(path => path, StringComparer.Ordinal).ToArray();
     }
 
+    /// <summary>
+    /// Converts an actual file path to the manifest's unambiguous slash-separated format.
+    /// A literal backslash in a Unix filename cannot be represented by this schema.
+    /// </summary>
+    internal static String ToManifestPath(String root, String file)
+    {
+        String relative = Path.GetRelativePath(Path.GetFullPath(root), Path.GetFullPath(file));
+        StringComparison comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (relative == "." || relative == ".." ||
+            relative.StartsWith(".." + Path.DirectorySeparatorChar, comparison) ||
+            Path.IsPathRooted(relative))
+        {
+            throw new InvalidDataException("Evidence file is outside the root.");
+        }
+
+        if (!OperatingSystem.IsWindows() && relative.Contains('\\'))
+        {
+            throw new InvalidDataException(
+                "Evidence filename contains a literal backslash and cannot be represented in the manifest.");
+        }
+
+        return relative.Replace(Path.DirectorySeparatorChar, '/');
+    }
+
     internal static String Resolve(String root, String relative)
     {
         if (String.IsNullOrWhiteSpace(relative) ||
