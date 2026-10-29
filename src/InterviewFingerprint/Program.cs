@@ -233,8 +233,10 @@ internal static class Program
                     String[] actualPaths = EvidenceFiles.Enumerate(root)
                         .Select(file => EvidenceFiles.ToManifestPath(root, file)).ToArray();
 
-                    Int32 matched = 0;
-                    Int32 errors = 0;
+                    // Finish every hash check before printing successful records.
+                    // If a later file throws an I/O or link-validation error, no
+                    // earlier OK line should be mistaken for a completed verification.
+                    List<(String Relative, Boolean Matches)> results = new();
                     foreach (var item in validated)
                     {
                         Boolean matches = false;
@@ -247,8 +249,15 @@ internal static class Program
                                 snapshot.Sha256.Equals(item.Record.Sha256, StringComparison.OrdinalIgnoreCase);
                         }
 
-                        Console.WriteLine($"{(matches ? "OK" : "CHANGED/MISSING")} {JsonSerializer.Serialize(item.Relative)}");
-                        if (matches)
+                        results.Add((item.Relative, matches));
+                    }
+
+                    Int32 matched = 0;
+                    Int32 errors = 0;
+                    foreach (var result in results)
+                    {
+                        Console.WriteLine($"{(result.Matches ? "OK" : "CHANGED/MISSING")} {JsonSerializer.Serialize(result.Relative)}");
+                        if (result.Matches)
                         {
                             matched++;
                         }

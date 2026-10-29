@@ -445,7 +445,12 @@ internal static class Program
 
         String extra = Path.Combine(evidence, "not-submitted.txt");
         File.WriteAllText(extra, "extra");
-        RequireExit(application, 1, "check-archive", "--in", evidence, "--manifest", manifest);
+        (Int32 extraExit, String extraOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", manifest);
+        Require(extraExit == 1 &&
+            extraOutput.Contains("EXTRA " + JsonSerializer.Serialize("not-submitted.txt"), StringComparison.Ordinal) &&
+            extraOutput.Contains("OK " + JsonSerializer.Serialize("submission.txt"), StringComparison.Ordinal),
+            "A complete check must still report both verified and extra files: " + extraOutput);
         File.Delete(extra);
 
         String manifestJsonForSize = File.ReadAllText(manifest);
