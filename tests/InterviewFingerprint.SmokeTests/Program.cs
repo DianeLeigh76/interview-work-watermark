@@ -240,9 +240,29 @@ internal static class Program
         String submittedFile = Path.Combine(evidence, "submission.txt");
         File.WriteAllText(submittedFile, "original");
         File.WriteAllBytes(Path.Combine(evidence, "empty.txt"), Array.Empty<Byte>());
+        String nestedFolder = Path.Combine(evidence, "subfolder");
+        Directory.CreateDirectory(nestedFolder);
+        File.WriteAllText(Path.Combine(nestedFolder, "nested.txt"), "nested");
+
+        // Unix allows a literal backslash in a filename. It must not be
+        // mistaken for a directory separator in a slash-delimited manifest.
+        if (!OperatingSystem.IsWindows())
+        {
+            String ambiguousName = Path.Combine(evidence, "literal\\slash.txt");
+            File.WriteAllText(ambiguousName, "ambiguous");
+            String rejectedManifest = Path.Combine(folder, "ambiguous-path.json");
+            RequireExit(application, 2, "archive", "--in", evidence,
+                "--out", rejectedManifest, "--id", "submission-one");
+            Require(!File.Exists(rejectedManifest),
+                "Ambiguous Unix filenames must not produce a manifest");
+            File.Delete(ambiguousName);
+        }
+
         String manifest = Path.Combine(folder, "manifest.json");
         RequireExit(application, 0, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
         String originalManifestJson = File.ReadAllText(manifest);
+        Require(originalManifestJson.Contains("\"Path\": \"subfolder/nested.txt\"", StringComparison.Ordinal),
+            "Nested evidence paths must use forward slashes in the manifest");
         // A symlinked output parent can point back into the evidence directory
         // even though the lexical --out path appears to be outside it.
         if (!OperatingSystem.IsWindows())
@@ -302,6 +322,18 @@ internal static class Program
         Require(File.ReadAllText(manifest) == originalManifestJson,
             "A second archive must not overwrite an existing evidence manifest");
         RequireExit(application, 0, "check-archive", "--in", evidence + Path.DirectorySeparatorChar, "--manifest", manifest);
+
+        if (!OperatingSystem.IsWindows())
+        {
+            String ambiguousExtra = Path.Combine(evidence, "literal\\slash.txt");
+            File.WriteAllText(ambiguousExtra, "not in the manifest");
+            (Int32 ambiguousExit, String ambiguousOutput) = Execute(application,
+                "check-archive", "--in", evidence, "--manifest", manifest);
+            Require(ambiguousExit == 2 &&
+                !ambiguousOutput.Contains("OK ", StringComparison.Ordinal),
+                "Ambiguous extra filenames must fail before any OK records: " + ambiguousOutput);
+            File.Delete(ambiguousExtra);
+        }
 
         // A missing evidence root must fail before any success records are printed.
         String missingEvidence = Path.Combine(folder, "missing-evidence");
@@ -396,7 +428,10 @@ internal static class Program
                 Path.Combine(folder, "linked-archive.json"), "--id", "submission-one");
             String linkManifest = Path.Combine(folder, "linked-manifest.json");
             File.WriteAllText(linkManifest, manifestJsonForSize.Replace("submission.txt", "linked.txt", StringComparison.Ordinal));
-            RequireExit(application, 2, "check-archive", "--in", evidence, "--manifest", linkManifest);
+            (Int32 linkedExit, String linkedOutput) = Execute(application,
+                "check-archive", "--in", evidence, "--manifest", linkManifest);
+            Require(linkedExit == 2 && !linkedOutput.Contains("OK ", StringComparison.Ordinal),
+                "Linked evidence must fail before any successful verification records: " + linkedOutput);
             File.Delete(linked);
 
             String linkedParent = Path.Combine(folder, "linked-parent");
