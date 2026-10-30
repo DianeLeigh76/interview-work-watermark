@@ -309,11 +309,32 @@ internal static class Program
             Require(!File.Exists(rejectedManifest),
                 "Ambiguous Unix filenames must not produce a manifest");
             File.Delete(ambiguousName);
+
+            // A colon is a legal Unix filename character but can name an
+            // alternate data stream on Windows. Do not emit such a manifest.
+            String colonName = Path.Combine(evidence, "colon:name.txt");
+            File.WriteAllText(colonName, "ambiguous across platforms");
+            String colonManifest = Path.Combine(folder, "colon-path.json");
+            RequireExit(application, 2, "archive", "--in", evidence,
+                "--out", colonManifest, "--id", "submission-one");
+            Require(!File.Exists(colonManifest),
+                "Colon-bearing Unix filenames must not produce a manifest");
+            File.Delete(colonName);
         }
 
         String manifest = Path.Combine(folder, "manifest.json");
         RequireExit(application, 0, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
         String originalManifestJson = File.ReadAllText(manifest);
+        String colonPathJson = originalManifestJson.Replace(
+            "\"Path\": \"submission.txt\"", "\"Path\": \"submission.txt:stream\"",
+            StringComparison.Ordinal);
+        Require(colonPathJson != originalManifestJson, "Expected submission.txt in manifest");
+        String colonPathManifest = Path.Combine(folder, "colon-path-forged.json");
+        File.WriteAllText(colonPathManifest, colonPathJson);
+        (Int32 colonPathExit, String colonPathOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", colonPathManifest);
+        Require(colonPathExit == 2 && !colonPathOutput.Contains("OK ", StringComparison.Ordinal),
+            "Manifest path resembling a Windows alternate data stream must fail: " + colonPathOutput);
         Require(originalManifestJson.Contains("\"Path\": \"subfolder/nested.txt\"", StringComparison.Ordinal),
             "Nested evidence paths must use forward slashes in the manifest");
         // A symlinked output parent can point back into the evidence directory
