@@ -123,6 +123,12 @@ internal static class EvidenceFiles
     {
         foreach (String segment in relative.Split('/'))
         {
+            if (segment.EndsWith(' ') || segment.EndsWith('.') ||
+                segment.Any(character => character < ' ' || "\"<>|?*".Contains(character)))
+            {
+                throw new InvalidDataException("Evidence path contains a non-portable Windows filename.");
+            }
+
             String stem = segment.Split('.')[0];
             Boolean reserved = stem.Equals("CON", StringComparison.OrdinalIgnoreCase) ||
                 stem.Equals("PRN", StringComparison.OrdinalIgnoreCase) ||

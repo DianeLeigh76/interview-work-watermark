@@ -322,7 +322,11 @@ internal static class Program
             File.Delete(colonName);
 
             // Device names remain reserved on Windows even with extensions.
-            foreach (String deviceName in new[] { "CON.txt", "com¹.log" })
+            foreach (String deviceName in new String[]
+            {
+                "CON.txt",
+                "com¹.log"
+            })
             {
                 String deviceFile = Path.Combine(evidence, deviceName);
                 File.WriteAllText(deviceFile, "Unix-only device name");
@@ -332,6 +336,25 @@ internal static class Program
                 Require(!File.Exists(deviceManifest),
                     "Windows device names must not produce a portable manifest");
                 File.Delete(deviceFile);
+            }
+
+            // Trailing dots/spaces and Windows-invalid characters must also be rejected.
+            foreach (String unsafeName in new String[]
+            {
+                "trailing.",
+                "trailing ",
+                "question?.txt",
+                "line\nfeed.txt"
+            })
+            {
+                String unsafeFile = Path.Combine(evidence, unsafeName);
+                File.WriteAllText(unsafeFile, "nonportable");
+                String unsafeManifest = Path.Combine(folder, "unsafe-name.json");
+                RequireExit(application, 2, "archive", "--in", evidence,
+                    "--out", unsafeManifest, "--id", "submission-one");
+                Require(!File.Exists(unsafeManifest),
+                    "Nonportable Unix filename must not produce a manifest");
+                File.Delete(unsafeFile);
             }
         }
 
@@ -358,6 +381,23 @@ internal static class Program
             "check-archive", "--in", evidence, "--manifest", devicePathManifest);
         Require(devicePathExit == 2 && !devicePathOutput.Contains("OK ", StringComparison.Ordinal),
             "Windows device names in manifests must fail before OK output: " + devicePathOutput);
+        foreach (String unsafePath in new String[]
+        {
+            "submission.txt.",
+            "question?.txt",
+            "line\\nfeed.txt"
+        })
+        {
+            String unsafeJson = originalManifestJson.Replace(
+                "\"Path\": \"submission.txt\"", "\"Path\": \"" + unsafePath + "\"",
+                StringComparison.Ordinal);
+            String unsafeManifest = Path.Combine(folder, "unsafe-path-forged.json");
+            File.WriteAllText(unsafeManifest, unsafeJson);
+            (Int32 unsafeExit, String unsafeOutput) = Execute(application,
+                "check-archive", "--in", evidence, "--manifest", unsafeManifest);
+            Require(unsafeExit == 2 && !unsafeOutput.Contains("OK ", StringComparison.Ordinal),
+                "Nonportable manifest path must fail before OK output: " + unsafeOutput);
+        }
         Require(originalManifestJson.Contains("\"Path\": \"subfolder/nested.txt\"", StringComparison.Ordinal),
             "Nested evidence paths must use forward slashes in the manifest");
         // A symlinked output parent can point back into the evidence directory
