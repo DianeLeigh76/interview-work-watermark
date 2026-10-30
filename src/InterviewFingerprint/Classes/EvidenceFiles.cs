@@ -12,6 +12,9 @@ internal static class EvidenceFiles
         RejectLinkedAncestors(fullRoot);
 
         List<String> files = new List<String>();
+        // Check every entry, not only files: case-colliding directories or a
+        // file/directory pair can merge or conflict when restored on Windows.
+        HashSet<String> portableEntries = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
         Stack<String> pending = new Stack<String>();
         pending.Push(fullRoot);
         while (pending.Count > 0)
@@ -25,6 +28,12 @@ internal static class EvidenceFiles
                     throw new InvalidDataException("Evidence contains a symbolic link or junction: " + entry);
                 }
 
+                String relative = ToManifestPath(fullRoot, entry);
+                if (!portableEntries.Add(relative))
+                {
+                    throw new InvalidDataException("Evidence contains case-colliding file or directory paths.");
+                }
+
                 if ((attributes & FileAttributes.Directory) != 0)
                 {
                     pending.Push(entry);
@@ -33,17 +42,6 @@ internal static class EvidenceFiles
                 {
                     files.Add(entry);
                 }
-            }
-        }
-
-        // A Unix directory can contain names differing only by case, while
-        // a typical Windows evidence directory cannot represent both.
-        HashSet<String> portablePaths = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
-        foreach (String file in files)
-        {
-            if (!portablePaths.Add(ToManifestPath(fullRoot, file)))
-            {
-                throw new InvalidDataException("Evidence contains case-colliding file paths.");
             }
         }
 
