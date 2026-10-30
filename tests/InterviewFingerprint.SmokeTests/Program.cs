@@ -548,18 +548,18 @@ internal static class Program
             !duplicateNestedOutput.Contains("OK ", StringComparison.Ordinal),
             "Duplicate nested JSON keys must fail before OK output: " + duplicateNestedOutput);
 
-        // File names containing newlines must not be able to forge separate OK lines
-        // in captured verification logs (valid file names on Unix systems).
+        // Newline-bearing Unix filenames are no longer portable evidence names.
+        // Verification must reject them before reporting any successful matches.
         if (!OperatingSystem.IsWindows())
         {
             String misleading = Path.Combine(evidence, "line\\nOK forged.txt".Replace("\\n", "\n"));
             File.WriteAllText(misleading, "unrecorded");
             (Int32 escapedExit, String escapedOutput) = Execute(application,
                 "check-archive", "--in", evidence, "--manifest", manifest);
-            Require(escapedExit == 1 &&
-                escapedOutput.Contains("EXTRA " + JsonSerializer.Serialize("line\nOK forged.txt"), StringComparison.Ordinal) &&
+            Require(escapedExit == 2 &&
+                !escapedOutput.Contains("OK " + JsonSerializer.Serialize("submission.txt"), StringComparison.Ordinal) &&
                 !escapedOutput.Contains("\nOK forged.txt", StringComparison.Ordinal),
-                "Evidence filenames must be escaped in verification logs: " + escapedOutput);
+                "Nonportable newline filename must fail before any OK records: " + escapedOutput);
             File.Delete(misleading);
         }
 
