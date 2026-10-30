@@ -356,6 +356,16 @@ internal static class Program
                     "Nonportable Unix filename must not produce a manifest");
                 File.Delete(unsafeFile);
             }
+
+            // Two case-only variants cannot both be restored on typical Windows volumes.
+            String caseVariant = Path.Combine(evidence, "SUBMISSION.txt");
+            File.WriteAllText(caseVariant, "case collision");
+            String caseManifest = Path.Combine(folder, "case-collision.json");
+            RequireExit(application, 2, "archive", "--in", evidence,
+                "--out", caseManifest, "--id", "submission-one");
+            Require(!File.Exists(caseManifest),
+                "Case-colliding Unix files must not produce a portable manifest");
+            File.Delete(caseVariant);
         }
 
         String manifest = Path.Combine(folder, "manifest.json");
@@ -398,6 +408,19 @@ internal static class Program
             Require(unsafeExit == 2 && !unsafeOutput.Contains("OK ", StringComparison.Ordinal),
                 "Nonportable manifest path must fail before OK output: " + unsafeOutput);
         }
+        JsonNode caseDuplicate = JsonNode.Parse(originalManifestJson)!;
+        JsonArray caseEntries = caseDuplicate["Files"]!.AsArray();
+        JsonNode caseEntry = caseEntries.First(entry =>
+            entry?["Path"]?.GetValue<String>() == "submission.txt")!.DeepClone();
+        caseEntry["Path"] = "SUBMISSION.txt";
+        caseEntries.Add(caseEntry);
+        String caseDuplicateManifest = Path.Combine(folder, "case-duplicate-forged.json");
+        File.WriteAllText(caseDuplicateManifest, caseDuplicate.ToJsonString());
+        (Int32 caseDuplicateExit, String caseDuplicateOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", caseDuplicateManifest);
+        Require(caseDuplicateExit == 2 &&
+            !caseDuplicateOutput.Contains("OK ", StringComparison.Ordinal),
+            "Case-only duplicate manifest entries must fail before OK output: " + caseDuplicateOutput);
         Require(originalManifestJson.Contains("\"Path\": \"subfolder/nested.txt\"", StringComparison.Ordinal),
             "Nested evidence paths must use forward slashes in the manifest");
         // A symlinked output parent can point back into the evidence directory

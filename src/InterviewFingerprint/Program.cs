@@ -207,7 +207,8 @@ internal static class Program
                     String root = Path.GetFullPath(input);
                     StringComparer pathComparer = OperatingSystem.IsWindows()
                         ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-                    HashSet<String> expected = new HashSet<String>(pathComparer);
+                    // Reject case-only duplicates even on case-sensitive Unix hosts.
+                    HashSet<String> expected = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
                     List<(String File, String Relative, FileRecord Record)> validated = new();
 
                     // Validate the entire manifest before printing any OK results.

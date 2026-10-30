@@ -36,6 +36,17 @@ internal static class EvidenceFiles
             }
         }
 
+        // A Unix directory can contain names differing only by case, while
+        // a typical Windows evidence directory cannot represent both.
+        HashSet<String> portablePaths = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        foreach (String file in files)
+        {
+            if (!portablePaths.Add(ToManifestPath(fullRoot, file)))
+            {
+                throw new InvalidDataException("Evidence contains case-colliding file paths.");
+            }
+        }
+
         return files.OrderBy(path => path, StringComparer.Ordinal).ToArray();
     }
 
