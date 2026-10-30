@@ -76,8 +76,7 @@ internal static class EvidenceFiles
         if (String.IsNullOrWhiteSpace(relative) ||
             relative.Contains('\\') ||
             relative.Contains(':') ||
-            Path.IsPathRooted(relative) ||
-            (relative.Length >= 2 && Char.IsLetter(relative[0]) && relative[1] == ':'))
+            Path.IsPathRooted(relative))
         {
             throw new InvalidDataException("Manifest contains an invalid relative path.");
         }
