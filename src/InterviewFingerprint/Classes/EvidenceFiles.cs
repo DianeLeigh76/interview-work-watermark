@@ -61,6 +61,13 @@ internal static class EvidenceFiles
                 "Evidence filename contains a literal backslash and cannot be represented in the manifest.");
         }
 
+        // Colons can identify NTFS alternate data streams on Windows. Reject them
+        // on every platform so a Unix-created manifest cannot name an ADS.
+        if (relative.Contains(':'))
+        {
+            throw new InvalidDataException("Evidence filename contains a colon and is not portable in the manifest.");
+        }
+
         return relative.Replace(Path.DirectorySeparatorChar, '/');
     }
 
@@ -68,6 +75,7 @@ internal static class EvidenceFiles
     {
         if (String.IsNullOrWhiteSpace(relative) ||
             relative.Contains('\\') ||
+            relative.Contains(':') ||
             Path.IsPathRooted(relative) ||
             (relative.Length >= 2 && Char.IsLetter(relative[0]) && relative[1] == ':'))
         {
