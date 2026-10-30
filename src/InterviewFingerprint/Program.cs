@@ -255,6 +255,18 @@ internal static class Program
                         results.Add((item.Relative, matches));
                     }
 
+                    // Re-enumerate after hashing. An addition, removal or link swap
+                    // during a long check must not yield an apparently complete report.
+                    // This remains a best-effort check, not an atomic snapshot.
+                    HashSet<String> initialPaths = new HashSet<String>(actualPaths, pathComparer);
+                    HashSet<String> finalPaths = new HashSet<String>(
+                        EvidenceFiles.Enumerate(root)
+                            .Select(file => EvidenceFiles.ToManifestPath(root, file)), pathComparer);
+                    if (!initialPaths.SetEquals(finalPaths))
+                    {
+                        throw new InvalidDataException("Evidence file list changed during verification.");
+                    }
+
                     Int32 matched = 0;
                     Int32 errors = 0;
                     foreach (var result in results)
