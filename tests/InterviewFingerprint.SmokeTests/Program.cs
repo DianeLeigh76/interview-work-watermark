@@ -483,6 +483,47 @@ internal static class Program
             "A second archive must not overwrite an existing evidence manifest");
         RequireExit(application, 0, "check-archive", "--in", evidence + Path.DirectorySeparatorChar, "--manifest", manifest);
 
+        // Different Unix directories can collapse to one Windows directory.
+        // Check every entry, not only complete file paths, before accepting an archive.
+        if (OperatingSystem.IsLinux())
+        {
+            String upperDirectory = Path.Combine(evidence, "CaseFolder");
+            String lowerDirectory = Path.Combine(evidence, "casefolder");
+            Directory.CreateDirectory(upperDirectory);
+            Directory.CreateDirectory(lowerDirectory);
+            File.WriteAllText(Path.Combine(upperDirectory, "one.txt"), "one");
+            File.WriteAllText(Path.Combine(lowerDirectory, "two.txt"), "two");
+            String collisionManifest = Path.Combine(folder, "directory-collision.json");
+            RequireExit(application, 2, "archive", "--in", evidence,
+                "--out", collisionManifest, "--id", "submission-one");
+            Require(!File.Exists(collisionManifest),
+                "Case-colliding directories must not produce a manifest");
+            (Int32 directoryExit, String directoryOutput) = Execute(application,
+                "check-archive", "--in", evidence, "--manifest", manifest);
+            Require(directoryExit == 2 && !directoryOutput.Contains("OK ", StringComparison.Ordinal),
+                "Case-colliding directories must fail before OK output: " + directoryOutput);
+            Directory.Delete(upperDirectory, recursive: true);
+            Directory.Delete(lowerDirectory, recursive: true);
+
+            // A file and a directory can also collide after case folding.
+            String mixedDirectory = Path.Combine(evidence, "MixedEntry");
+            String mixedFile = Path.Combine(evidence, "mixedentry");
+            Directory.CreateDirectory(mixedDirectory);
+            File.WriteAllText(Path.Combine(mixedDirectory, "nested.txt"), "nested");
+            File.WriteAllText(mixedFile, "file");
+            String mixedManifest = Path.Combine(folder, "mixed-entry-collision.json");
+            RequireExit(application, 2, "archive", "--in", evidence,
+                "--out", mixedManifest, "--id", "submission-one");
+            Require(!File.Exists(mixedManifest),
+                "File/directory case collision must not produce a manifest");
+            (Int32 mixedExit, String mixedOutput) = Execute(application,
+                "check-archive", "--in", evidence, "--manifest", manifest);
+            Require(mixedExit == 2 && !mixedOutput.Contains("OK ", StringComparison.Ordinal),
+                "File/directory case collision must fail before OK output: " + mixedOutput);
+            File.Delete(mixedFile);
+            Directory.Delete(mixedDirectory, recursive: true);
+        }
+
         if (!OperatingSystem.IsWindows())
         {
             String ambiguousExtra = Path.Combine(evidence, "literal\\slash.txt");
