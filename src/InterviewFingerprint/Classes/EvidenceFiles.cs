@@ -68,7 +68,9 @@ internal static class EvidenceFiles
             throw new InvalidDataException("Evidence filename contains a colon and is not portable in the manifest.");
         }
 
-        return relative.Replace(Path.DirectorySeparatorChar, '/');
+        String canonical = relative.Replace(Path.DirectorySeparatorChar, '/');
+        ValidatePortableSegments(canonical);
+        return canonical;
     }
 
     internal static String Resolve(String root, String relative)
@@ -87,6 +89,7 @@ internal static class EvidenceFiles
             throw new InvalidDataException("Manifest contains a non-canonical relative path.");
         }
 
+        ValidatePortableSegments(relative);
         String fullRoot = Path.GetFullPath(root);
         String file = Path.GetFullPath(Path.Combine(fullRoot,
             relative.Replace('/', Path.DirectorySeparatorChar)));
@@ -112,6 +115,30 @@ internal static class EvidenceFiles
         }
 
         return file;
+    }
+
+    // Windows treats these names as devices even when followed by an extension.
+    // Validate on every platform so a Unix archive is portable to Windows.
+    private static void ValidatePortableSegments(String relative)
+    {
+        foreach (String segment in relative.Split('/'))
+        {
+            String stem = segment.Split('.')[0];
+            Boolean reserved = stem.Equals("CON", StringComparison.OrdinalIgnoreCase) ||
+                stem.Equals("PRN", StringComparison.OrdinalIgnoreCase) ||
+                stem.Equals("AUX", StringComparison.OrdinalIgnoreCase) ||
+                stem.Equals("NUL", StringComparison.OrdinalIgnoreCase) ||
+                stem.Equals("CONIN$", StringComparison.OrdinalIgnoreCase) ||
+                stem.Equals("CONOUT$", StringComparison.OrdinalIgnoreCase) ||
+                (stem.Length == 4 &&
+                 (stem.StartsWith("COM", StringComparison.OrdinalIgnoreCase) ||
+                  stem.StartsWith("LPT", StringComparison.OrdinalIgnoreCase)) &&
+                 "123456789¹²³".Contains(stem[3]));
+            if (reserved)
+            {
+                throw new InvalidDataException("Evidence path contains a Windows device name.");
+            }
+        }
     }
 
     internal static void RejectLinkedAncestors(String path)

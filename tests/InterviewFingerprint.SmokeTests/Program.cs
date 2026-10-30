@@ -320,6 +320,19 @@ internal static class Program
             Require(!File.Exists(colonManifest),
                 "Colon-bearing Unix filenames must not produce a manifest");
             File.Delete(colonName);
+
+            // Device names remain reserved on Windows even with extensions.
+            foreach (String deviceName in new[] { "CON.txt", "com¹.log" })
+            {
+                String deviceFile = Path.Combine(evidence, deviceName);
+                File.WriteAllText(deviceFile, "Unix-only device name");
+                String deviceManifest = Path.Combine(folder, "device-name.json");
+                RequireExit(application, 2, "archive", "--in", evidence,
+                    "--out", deviceManifest, "--id", "submission-one");
+                Require(!File.Exists(deviceManifest),
+                    "Windows device names must not produce a portable manifest");
+                File.Delete(deviceFile);
+            }
         }
 
         String manifest = Path.Combine(folder, "manifest.json");
@@ -335,6 +348,16 @@ internal static class Program
             "check-archive", "--in", evidence, "--manifest", colonPathManifest);
         Require(colonPathExit == 2 && !colonPathOutput.Contains("OK ", StringComparison.Ordinal),
             "Manifest path resembling a Windows alternate data stream must fail: " + colonPathOutput);
+        String devicePathJson = originalManifestJson.Replace(
+            "\"Path\": \"submission.txt\"", "\"Path\": \"NUL.txt\"",
+            StringComparison.Ordinal);
+        Require(devicePathJson != originalManifestJson, "Expected submission.txt in manifest");
+        String devicePathManifest = Path.Combine(folder, "device-path-forged.json");
+        File.WriteAllText(devicePathManifest, devicePathJson);
+        (Int32 devicePathExit, String devicePathOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", devicePathManifest);
+        Require(devicePathExit == 2 && !devicePathOutput.Contains("OK ", StringComparison.Ordinal),
+            "Windows device names in manifests must fail before OK output: " + devicePathOutput);
         Require(originalManifestJson.Contains("\"Path\": \"subfolder/nested.txt\"", StringComparison.Ordinal),
             "Nested evidence paths must use forward slashes in the manifest");
         // A symlinked output parent can point back into the evidence directory
