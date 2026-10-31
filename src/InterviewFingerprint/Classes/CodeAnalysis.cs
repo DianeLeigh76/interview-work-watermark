@@ -90,7 +90,15 @@ internal static class CodeAnalysis
             bomLength = 2;
         }
 
-        return encoding.GetString(bytes, bomLength, bytes.Length - bomLength);
+        String source = encoding.GetString(bytes, bomLength, bytes.Length - bomLength);
+        // NUL bytes in BOM-less UTF-16 can decode as valid UTF-8 while
+        // producing misleading C# tokens. Require an explicit Unicode BOM.
+        if (source.Contains('\0'))
+        {
+            throw new InvalidDataException("C# source contains NUL characters; use a supported Unicode BOM.");
+        }
+
+        return source;
     }
 
     private static HashSet<String> Shingles(String[] tokens)
