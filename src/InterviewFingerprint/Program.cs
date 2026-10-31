@@ -44,9 +44,12 @@ internal static class Program
                     EvidenceFiles.RejectLinkedAncestors(outputDirectory);
                     using (SKImage marked = SKImage.FromBitmap(image))
                     using (SKData encoded = marked.Encode(SKEncodedImageFormat.Png, 100))
-                    using (FileStream stream = new FileStream(output, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                     {
-                        encoded.SaveTo(stream);
+                        // A failed PNG write must not publish a partial marked image.
+                        WriteNewFileAtomically(output, stream =>
+                        {
+                            encoded.SaveTo(stream);
+                        });
                     }
                     Console.WriteLine($"Marked PNG: {JsonSerializer.Serialize(output)}");
                     Console.WriteLine($"SHA-256: {HashFile(output)}");
