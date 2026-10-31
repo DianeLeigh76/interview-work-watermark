@@ -244,6 +244,10 @@ internal static class Program
                         validated.Add((file, relative, entry));
                     }
 
+                    // A manifest must not describe two differently cased directory names
+                    // or treat the same path as both a file and a directory.
+                    ValidatePortableManifestTree(validated.Select(item => item.Relative));
+
                     // Validate the complete filesystem snapshot, including extra names and
                     // links, before printing any successful verification records.
                     String[] actualPaths = EvidenceFiles.Enumerate(root)
@@ -319,6 +323,52 @@ internal static class Program
         {
             Console.Error.WriteLine($"Error: {JsonSerializer.Serialize(problem.Message)}");
             return 2;
+        }
+    }
+
+    private static void ValidatePortableManifestTree(IEnumerable<String> paths)
+    {
+        Dictionary<String, String> names = new Dictionary<String, String>(StringComparer.OrdinalIgnoreCase);
+        HashSet<String> files = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        HashSet<String> directories = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        foreach (String path in paths)
+        {
+            String[] segments = path.Split('/');
+            String prefix = String.Empty;
+            for (Int32 index = 0; index < segments.Length; index++)
+            {
+                prefix = index == 0 ? segments[index] : prefix + "/" + segments[index];
+                if (names.TryGetValue(prefix, out String? existing))
+                {
+                    if (!String.Equals(existing, prefix, StringComparison.Ordinal))
+                    {
+                        throw new InvalidDataException("Manifest contains case-colliding path segments.");
+                    }
+                }
+                else
+                {
+                    names.Add(prefix, prefix);
+                }
+
+                if (index < segments.Length - 1)
+                {
+                    if (files.Contains(prefix))
+                    {
+                        throw new InvalidDataException("Manifest path is both a file and a directory.");
+                    }
+
+                    directories.Add(prefix);
+                }
+                else
+                {
+                    if (directories.Contains(prefix))
+                    {
+                        throw new InvalidDataException("Manifest path is both a file and a directory.");
+                    }
+
+                    files.Add(prefix);
+                }
+            }
         }
     }
 
