@@ -184,11 +184,12 @@ internal static class Program
                     // Recheck after creating parents: a linked directory could otherwise
                     // redirect the manifest into the evidence tree during hashing.
                     EvidenceFiles.RejectLinkedAncestors(Path.GetDirectoryName(fullOutput)!);
-                    // Preserve an existing evidence manifest instead of silently replacing it.
-                    using (FileStream stream = new FileStream(fullOutput, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    // Write a complete temporary manifest before publishing it. A failed
+                    // serialization must not leave a partial file at the requested path.
+                    WriteNewFileAtomically(fullOutput, stream =>
                     {
                         JsonSerializer.Serialize(stream, record, new JsonSerializerOptions { WriteIndented = true });
-                    }
+                    });
                     Console.WriteLine($"Archived {files.Length} file hashes: {JsonSerializer.Serialize(output)}");
                     Console.WriteLine("Preserve original files, email headers, and a trustworthy external timestamp.");
                     return 0;
@@ -471,6 +472,35 @@ internal static class Program
             throw new ArgumentException("Input and output must differ.");
         }
     }
+    // Publish a completed file by renaming it within the same directory.
+    // File.Move without overwrite preserves an existing destination.
+    private static void WriteNewFileAtomically(String output, Action<FileStream> write)
+    {
+        String fullOutput = Path.GetFullPath(output);
+        String directory = Path.GetDirectoryName(fullOutput)!;
+        EvidenceFiles.RejectLinkedAncestors(directory);
+        String temporary = Path.Combine(directory,
+            "." + Path.GetFileName(fullOutput) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+        try
+        {
+            using (FileStream stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                write(stream);
+                stream.Flush(flushToDisk: true);
+            }
+
+            EvidenceFiles.RejectLinkedAncestors(directory);
+            File.Move(temporary, fullOutput);
+        }
+        finally
+        {
+            if (File.Exists(temporary))
+            {
+                File.Delete(temporary);
+            }
+        }
+    }
+
     private static String HashFile(String path)
     {
         return HashFileAndLength(path).Sha256;
