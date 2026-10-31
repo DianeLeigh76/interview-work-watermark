@@ -440,6 +440,28 @@ internal static class Program
         Require(caseDuplicateExit == 2 &&
             !caseDuplicateOutput.Contains("OK ", StringComparison.Ordinal),
             "Case-only duplicate manifest entries must fail before OK output: " + caseDuplicateOutput);
+        // Distinct full paths can still contain case-colliding parent directories,
+        // or describe a path as both a file and a directory.
+        foreach (String forgedPath in new String[]
+        {
+            "SUBFOLDER/other.txt",
+            "subfolder"
+        })
+        {
+            JsonNode forgedTree = JsonNode.Parse(originalManifestJson)!;
+            JsonArray forgedEntries = forgedTree["Files"]!.AsArray();
+            JsonNode forgedEntry = forgedEntries.First(entry =>
+                entry?["Path"]?.GetValue<String>() == "submission.txt")!.DeepClone();
+            forgedEntry["Path"] = forgedPath;
+            forgedEntries.Add(forgedEntry);
+            String forgedTreeManifest = Path.Combine(folder, "tree-collision-forged.json");
+            File.WriteAllText(forgedTreeManifest, forgedTree.ToJsonString());
+            (Int32 treeExit, String treeOutput) = Execute(application,
+                "check-archive", "--in", evidence, "--manifest", forgedTreeManifest);
+            Require(treeExit == 2 && !treeOutput.Contains("OK ", StringComparison.Ordinal),
+                "Conflicting manifest tree paths must fail before OK output: " + treeOutput);
+        }
+
         Require(originalManifestJson.Contains("\"Path\": \"subfolder/nested.txt\"", StringComparison.Ordinal),
             "Nested evidence paths must use forward slashes in the manifest");
         // A symlinked output parent can point back into the evidence directory
