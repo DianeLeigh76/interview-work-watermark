@@ -204,6 +204,25 @@ internal static class Program
         RequireExit(application, 2, "code-fingerprint", "--in", invalidUtf8);
         RequireExit(application, 2, "compare-code", "--a", invalidUtf8, "--b", withoutBom);
 
+        // BOM-less UTF-16 can be valid UTF-8 bytewise but contains NULs.
+        // Do not report syntax fingerprints for incorrectly decoded source.
+        String bomlessUtf16 = Path.Combine(folder, "BomlessUtf16.cs");
+        File.WriteAllText(bomlessUtf16, bomSource,
+            new UnicodeEncoding(bigEndian: false, byteOrderMark: false, throwOnInvalidBytes: true));
+        (Int32 bomlessExit, String bomlessOutput) = Execute(application,
+            "code-fingerprint", "--in", bomlessUtf16);
+        Require(bomlessExit == 2 &&
+            bomlessOutput.Contains("NUL characters", StringComparison.Ordinal) &&
+            !bomlessOutput.Contains("Syntax token SHA-256:", StringComparison.Ordinal),
+            "BOM-less UTF-16 must not produce a misleading syntax hash: " + bomlessOutput);
+        RequireExit(application, 2, "compare-code", "--a", bomlessUtf16, "--b", withoutBom);
+
+        // A literal NUL in an otherwise valid UTF-8 source is also invalid input.
+        String embeddedNul = Path.Combine(folder, "EmbeddedNul.cs");
+        File.WriteAllText(embeddedNul, "class Example { }\\0".Replace("\\0", "\0"));
+        RequireExit(application, 2, "code-fingerprint", "--in", embeddedNul);
+        RequireExit(application, 2, "compare-code", "--a", withoutBom, "--b", embeddedNul);
+
         // BOM-marked UTF-16/UTF-32 are supported, but malformed surrogate/code
         // point sequences must fail rather than silently becoming replacement text.
         String utf16 = Path.Combine(folder, "Utf16.cs");
