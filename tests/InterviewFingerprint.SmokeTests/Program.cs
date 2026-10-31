@@ -458,8 +458,12 @@ internal static class Program
             File.WriteAllText(forgedTreeManifest, forgedTree.ToJsonString());
             (Int32 treeExit, String treeOutput) = Execute(application,
                 "check-archive", "--in", evidence, "--manifest", forgedTreeManifest);
-            Require(treeExit == 2 && !treeOutput.Contains("OK ", StringComparison.Ordinal),
-                "Conflicting manifest tree paths must fail before OK output: " + treeOutput);
+            String expectedError = forgedPath == "subfolder"
+                ? "both a file and a directory" : "case-colliding path segments";
+            Require(treeExit == 2 &&
+                treeOutput.Contains(expectedError, StringComparison.Ordinal) &&
+                !treeOutput.Contains("OK ", StringComparison.Ordinal),
+                "Conflicting manifest tree paths must fail for the expected reason: " + treeOutput);
         }
 
         Require(originalManifestJson.Contains("\"Path\": \"subfolder/nested.txt\"", StringComparison.Ordinal),
