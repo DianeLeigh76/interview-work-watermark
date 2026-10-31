@@ -110,6 +110,16 @@ internal static class Program
         RequireExit(application, 2, "mark", "--in", input, "--out", marked, "--id", "submission-one");
         Require(File.ReadAllBytes(marked).SequenceEqual(originalMarkedBytes),
             "A second mark must not overwrite an existing output image");
+        Require(Directory.GetFiles(folder, ".marked.png.*.tmp").Length == 0,
+            "Marked image publication must not leave temporary files");
+        // An existing directory at the output path forces the final rename to fail.
+        // The completed temporary image must still be cleaned up.
+        String blockedImageOutput = Path.Combine(folder, "blocked-image.png");
+        Directory.CreateDirectory(blockedImageOutput);
+        RequireExit(application, 2, "mark", "--in", input, "--out", blockedImageOutput,
+            "--id", "submission-one");
+        Require(Directory.GetFiles(folder, ".blocked-image.png.*.tmp").Length == 0,
+            "Failed image publication must clean up its temporary file");
         // A newline in a user-supplied path must not forge another CLI log line.
         if (!OperatingSystem.IsWindows())
         {
@@ -526,6 +536,14 @@ internal static class Program
         RequireExit(application, 2, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
         Require(File.ReadAllText(manifest) == originalManifestJson,
             "A second archive must not overwrite an existing evidence manifest");
+        Require(Directory.GetFiles(folder, ".manifest.json.*.tmp").Length == 0,
+            "Manifest publication must not leave temporary files");
+        String blockedManifestOutput = Path.Combine(folder, "blocked-manifest.json");
+        Directory.CreateDirectory(blockedManifestOutput);
+        RequireExit(application, 2, "archive", "--in", evidence, "--out", blockedManifestOutput,
+            "--id", "submission-one");
+        Require(Directory.GetFiles(folder, ".blocked-manifest.json.*.tmp").Length == 0,
+            "Failed manifest publication must clean up its temporary file");
         RequireExit(application, 0, "check-archive", "--in", evidence + Path.DirectorySeparatorChar, "--manifest", manifest);
 
         // Different Unix directories can collapse to one Windows directory.
