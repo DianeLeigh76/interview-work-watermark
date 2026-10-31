@@ -219,7 +219,7 @@ internal static class Program
 
         // A literal NUL in an otherwise valid UTF-8 source is also invalid input.
         String embeddedNul = Path.Combine(folder, "EmbeddedNul.cs");
-        File.WriteAllText(embeddedNul, "class Example { }\\0".Replace("\\0", "\0"));
+        File.WriteAllText(embeddedNul, "class Example { }\0");
         RequireExit(application, 2, "code-fingerprint", "--in", embeddedNul);
         RequireExit(application, 2, "compare-code", "--a", withoutBom, "--b", embeddedNul);
 
