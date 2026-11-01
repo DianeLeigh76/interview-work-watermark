@@ -476,6 +476,26 @@ internal static class Program
                 "Conflicting manifest tree paths must fail for the expected reason: " + treeOutput);
         }
 
+        // A forged manifest can describe two Unicode spellings of the same
+        // directory. Such names may collapse on a normalizing filesystem.
+        JsonNode unicodeTree = JsonNode.Parse(originalManifestJson)!;
+        JsonArray unicodeEntries = unicodeTree["Files"]!.AsArray();
+        JsonNode unicodeFirst = unicodeEntries.First(entry =>
+            entry?["Path"]?.GetValue<String>() == "submission.txt")!.DeepClone();
+        JsonNode unicodeSecond = unicodeFirst.DeepClone();
+        unicodeFirst["Path"] = "Caf\\u00E9/one.txt";
+        unicodeSecond["Path"] = "Cafe\\u0301/two.txt";
+        unicodeEntries.Add(unicodeFirst);
+        unicodeEntries.Add(unicodeSecond);
+        String unicodeTreeManifest = Path.Combine(folder, "unicode-tree-collision.json");
+        File.WriteAllText(unicodeTreeManifest, unicodeTree.ToJsonString());
+        (Int32 unicodeTreeExit, String unicodeTreeOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", unicodeTreeManifest);
+        Require(unicodeTreeExit == 2 &&
+            unicodeTreeOutput.Contains("Unicode-normalization equivalents", StringComparison.Ordinal) &&
+            !unicodeTreeOutput.Contains("OK ", StringComparison.Ordinal),
+            "Normalized Unicode directory collisions must fail before OK output: " + unicodeTreeOutput);
+
         Require(originalManifestJson.Contains("\"Path\": \"subfolder/nested.txt\"", StringComparison.Ordinal),
             "Nested evidence paths must use forward slashes in the manifest");
         // A symlinked output parent can point back into the evidence directory
@@ -585,6 +605,24 @@ internal static class Program
                 "File/directory case collision must fail before OK output: " + mixedOutput);
             File.Delete(mixedFile);
             Directory.Delete(mixedDirectory, recursive: true);
+
+            // Linux can store composed and decomposed Unicode names separately.
+            // Their portable manifest keys must nevertheless be unique.
+            String composedName = Path.Combine(evidence, "Caf\\u00E9.txt");
+            String decomposedName = Path.Combine(evidence, "Cafe\\u0301.txt");
+            File.WriteAllText(composedName, "composed");
+            File.WriteAllText(decomposedName, "decomposed");
+            String unicodeCollisionManifest = Path.Combine(folder, "unicode-collision.json");
+            RequireExit(application, 2, "archive", "--in", evidence,
+                "--out", unicodeCollisionManifest, "--id", "submission-one");
+            Require(!File.Exists(unicodeCollisionManifest),
+                "Unicode-normalization-colliding files must not produce a manifest");
+            (Int32 unicodeExit, String unicodeOutput) = Execute(application,
+                "check-archive", "--in", evidence, "--manifest", manifest);
+            Require(unicodeExit == 2 && !unicodeOutput.Contains("OK ", StringComparison.Ordinal),
+                "Unicode-normalization-colliding files must fail before OK output: " + unicodeOutput);
+            File.Delete(composedName);
+            File.Delete(decomposedName);
         }
 
         if (!OperatingSystem.IsWindows())
