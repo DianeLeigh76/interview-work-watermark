@@ -194,7 +194,8 @@ internal static class Program
                         JsonSerializer.Serialize(stream, record, new JsonSerializerOptions { WriteIndented = true });
                     });
                     Console.WriteLine($"Archived {files.Length} file hashes: {JsonSerializer.Serialize(output)}");
-                    Console.WriteLine("Preserve original files, email headers, and a trustworthy external timestamp.");
+                    Console.WriteLine($"Manifest SHA-256: {HashFile(fullOutput)}");
+                    Console.WriteLine("Preserve the manifest digest independently with the original files, email headers, and a trustworthy external timestamp.");
                     return 0;
                 }
                 case "check-archive":
