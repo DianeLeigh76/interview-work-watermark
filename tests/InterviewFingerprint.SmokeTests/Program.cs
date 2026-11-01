@@ -404,7 +404,35 @@ internal static class Program
         String manifestDigest = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(manifest)));
         Require(archiveOutput.Contains("Manifest SHA-256: " + manifestDigest, StringComparison.Ordinal),
             "Archive must report the exact published manifest digest: " + archiveOutput);
+        // A separately retained manifest digest must be checked before any OK lines.
+        RequireExit(application, 0, "check-archive", "--in", evidence,
+            "--manifest", manifest, "--sha256", manifestDigest);
+        RequireExit(application, 0, "check-archive", "--in", evidence,
+            "--manifest", manifest, "--sha256", manifestDigest.ToLowerInvariant());
+        String incorrectManifestDigest = (manifestDigest[0] == '0' ? "1" : "0") + manifestDigest[1..];
+        (Int32 digestMismatchExit, String digestMismatchOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", manifest, "--sha256", incorrectManifestDigest);
+        Require(digestMismatchExit == 2 &&
+            digestMismatchOutput.Contains("Manifest SHA-256 does not match", StringComparison.Ordinal) &&
+            !digestMismatchOutput.Contains("OK ", StringComparison.Ordinal),
+            "An incorrect independent manifest digest must fail before reporting matches: " + digestMismatchOutput);
+        foreach (String invalidDigest in new String[] { "abc", new String('Z', 64) })
+        {
+            (Int32 invalidDigestExit, String invalidDigestOutput) = Execute(application,
+                "check-archive", "--in", evidence, "--manifest", manifest, "--sha256", invalidDigest);
+            Require(invalidDigestExit == 2 &&
+                invalidDigestOutput.Contains("--sha256 must be exactly 64 hexadecimal characters", StringComparison.Ordinal) &&
+                !invalidDigestOutput.Contains("OK ", StringComparison.Ordinal),
+                "Malformed independent manifest digest must be rejected: " + invalidDigestOutput);
+        }
+
         String originalManifestJson = File.ReadAllText(manifest);
+        String modifiedManifest = Path.Combine(folder, "manifest-modified.json");
+        File.WriteAllText(modifiedManifest, originalManifestJson + "\n");
+        (Int32 modifiedDigestExit, String modifiedDigestOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", modifiedManifest, "--sha256", manifestDigest);
+        Require(modifiedDigestExit == 2 && !modifiedDigestOutput.Contains("OK ", StringComparison.Ordinal),
+            "A byte-changed but parseable manifest must not pass independent digest verification: " + modifiedDigestOutput);
         String colonPathJson = originalManifestJson.Replace(
             "\"Path\": \"submission.txt\"", "\"Path\": \"submission.txt:stream\"",
             StringComparison.Ordinal);
