@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace InterviewFingerprint.Classes;
 
 /// <summary>
@@ -29,9 +31,13 @@ internal static class EvidenceFiles
                 }
 
                 String relative = ToManifestPath(fullRoot, entry);
-                if (!portableEntries.Add(relative))
+                // Some filesystems normalize Unicode names, so visually identical
+                // NFC/NFD paths must not be archived as separate evidence entries.
+                String portableKey = relative.Normalize(NormalizationForm.FormC);
+                if (!portableEntries.Add(portableKey))
                 {
-                    throw new InvalidDataException("Evidence contains case-colliding file or directory paths.");
+                    throw new InvalidDataException(
+                        "Evidence contains case- or Unicode-normalization-colliding file or directory paths.");
                 }
 
                 if ((attributes & FileAttributes.Directory) != 0)
