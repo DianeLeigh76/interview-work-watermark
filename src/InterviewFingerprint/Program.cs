@@ -342,35 +342,39 @@ internal static class Program
             for (Int32 index = 0; index < segments.Length; index++)
             {
                 prefix = index == 0 ? segments[index] : prefix + "/" + segments[index];
-                if (names.TryGetValue(prefix, out String? existing))
+                // Use normalized keys for every prefix, not only complete filenames:
+                // decomposed/composed Unicode directory names may collapse on restore.
+                String portableKey = prefix.Normalize(NormalizationForm.FormC);
+                if (names.TryGetValue(portableKey, out String? existing))
                 {
                     if (!String.Equals(existing, prefix, StringComparison.Ordinal))
                     {
-                        throw new InvalidDataException("Manifest contains case-colliding path segments.");
+                        throw new InvalidDataException(
+                            "Manifest contains case-colliding path segments or Unicode-normalization equivalents.");
                     }
                 }
                 else
                 {
-                    names.Add(prefix, prefix);
+                    names.Add(portableKey, prefix);
                 }
 
                 if (index < segments.Length - 1)
                 {
-                    if (files.Contains(prefix))
+                    if (files.Contains(portableKey))
                     {
                         throw new InvalidDataException("Manifest path is both a file and a directory.");
                     }
 
-                    directories.Add(prefix);
+                    directories.Add(portableKey);
                 }
                 else
                 {
-                    if (directories.Contains(prefix))
+                    if (directories.Contains(portableKey))
                     {
                         throw new InvalidDataException("Manifest path is both a file and a directory.");
                     }
 
-                    files.Add(prefix);
+                    files.Add(portableKey);
                 }
             }
         }
