@@ -416,7 +416,11 @@ internal static class Program
             digestMismatchOutput.Contains("Manifest SHA-256 does not match", StringComparison.Ordinal) &&
             !digestMismatchOutput.Contains("OK ", StringComparison.Ordinal),
             "An incorrect independent manifest digest must fail before reporting matches: " + digestMismatchOutput);
-        foreach (String invalidDigest in new String[] { "abc", new String('Z', 64) })
+        foreach (String invalidDigest in new String[]
+        {
+            "abc",
+            new String('Z', 64)
+        })
         {
             (Int32 invalidDigestExit, String invalidDigestOutput) = Execute(application,
                 "check-archive", "--in", evidence, "--manifest", manifest, "--sha256", invalidDigest);
