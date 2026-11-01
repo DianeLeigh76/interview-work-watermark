@@ -398,7 +398,12 @@ internal static class Program
         }
 
         String manifest = Path.Combine(folder, "manifest.json");
-        RequireExit(application, 0, "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
+        (Int32 archiveExit, String archiveOutput) = Execute(application,
+            "archive", "--in", evidence, "--out", manifest, "--id", "submission-one");
+        Require(archiveExit == 0, "Evidence archive must succeed: " + archiveOutput);
+        String manifestDigest = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(manifest)));
+        Require(archiveOutput.Contains("Manifest SHA-256: " + manifestDigest, StringComparison.Ordinal),
+            "Archive must report the exact published manifest digest: " + archiveOutput);
         String originalManifestJson = File.ReadAllText(manifest);
         String colonPathJson = originalManifestJson.Replace(
             "\"Path\": \"submission.txt\"", "\"Path\": \"submission.txt:stream\"",
