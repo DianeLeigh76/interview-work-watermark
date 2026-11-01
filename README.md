@@ -9,7 +9,7 @@ Open-source proof-of-origin tools for interview take-home assignments, artwork a
 - `mark`: alters the **actual pixels** of an input image with a keyed 64-bit, repeated DCT fingerprint and outputs a PNG. The fingerprint is not EXIF or an invisible text layer.
 - `verify`: tests a suspect image against a private key and per-submission ID; reports matching bit count and block vote agreement.
 - `archive`: creates a JSON SHA-256 manifest for **any** files, including source code, slides, documents, PDFs and graphics, without changing those files.
-- `check-archive`: checks recorded hashes **and file sizes**, rejects duplicate or escaping paths, and reports files added since the manifest was created.
+- `check-archive`: checks recorded hashes **and file sizes**, rejects duplicate or escaping paths, reports added files, and can first validate the manifest bytes against an independently saved SHA-256 digest.
 
 This project does **not yet** hide a fingerprint inside C# source code, prose, PDF text, Office documents, or arbitrary source files. The manifest proves integrity relative to the manifest; it does **not** prove who created a file or when it existed. Independent timestamping and retention of the actual submission are important.
 
@@ -22,6 +22,7 @@ dotnet run -- mark --in "campaign.png" --out "campaign-marked.png" --id "employe
 dotnet run -- verify --in "campaign-marked.png" --id "employerA-2026-10"
 dotnet run -- archive --in "C:\Submissions\EmployerA" --out "C:\Evidence\EmployerA.json" --id "employerA-2026-10"
 dotnet run -- check-archive --in "C:\Submissions\EmployerA" --manifest "C:\Evidence\EmployerA.json"
+# Optionally add --sha256 followed by the 64-character digest printed by archive.
 ```
 
 Before using `mark` or `verify`, set `IFP_SECRET` to a private random secret of at least 16 characters. Do not use the example placeholders as real secrets. Run `dotnet run --` to see usage.
@@ -32,7 +33,7 @@ For safety, provide secret keys through a restricted input mechanism in a future
 
 1. Produce your original content.
 2. Mark individual exported graphics with a **unique submission ID**, checking quality and running `verify` on the actual submitted image.
-3. Place the final submitted versions in a submission folder and produce an evidence manifest. The `archive` command prints the **SHA-256 of the completed manifest file**; preserve that digest separately from the manifest, alongside the originals, transmission receipt and source history. The digest lets you later compare manifest bytes against an independently retained value, but a digest stored only beside the manifest is **not authentication** or a trustworthy timestamp.
+3. Place the final submitted versions in a submission folder and produce an evidence manifest. The `archive` command prints the **SHA-256 of the completed manifest file**; preserve that digest separately from the manifest, alongside the originals, transmission receipt and source history. Later, supply the saved 64-character hexadecimal value with `check-archive --sha256 DIGEST` to reject a changed manifest **before** any file matches are reported. Without `--sha256`, archive checking still validates files against the supplied manifest, but cannot detect a manifest and files that were both altered consistently. A digest stored only beside the manifest is **not authentication** or a trustworthy timestamp.
 4. When suspected reuse occurs, preserve copies of public materials plus URLs and capture dates before comparing anything. Validate image matches and manually investigate other similarities.
 
 ### Known limitations
