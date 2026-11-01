@@ -32,7 +32,7 @@ For safety, provide secret keys through a restricted input mechanism in a future
 
 1. Produce your original content.
 2. Mark individual exported graphics with a **unique submission ID**, checking quality and running `verify` on the actual submitted image.
-3. Place the final submitted versions in a submission folder and produce an evidence manifest. Keep the originals, hashes, transmission receipt and source history securely.
+3. Place the final submitted versions in a submission folder and produce an evidence manifest. The `archive` command prints the **SHA-256 of the completed manifest file**; preserve that digest separately from the manifest, alongside the originals, transmission receipt and source history. The digest lets you later compare manifest bytes against an independently retained value, but a digest stored only beside the manifest is **not authentication** or a trustworthy timestamp.
 4. When suspected reuse occurs, preserve copies of public materials plus URLs and capture dates before comparing anything. Validate image matches and manually investigate other similarities.
 
 ### Known limitations
