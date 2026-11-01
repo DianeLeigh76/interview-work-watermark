@@ -209,7 +209,24 @@ internal static class Program
 
                     // Reject a linked evidence root before any manifest entry can be reported as OK.
                     EvidenceFiles.RejectLinkedAncestors(input);
-                    using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifestFile));
+                    // Hash and parse the same manifest bytes, so the supplied digest
+                    // cannot be checked against a different file read.
+                    Byte[] manifestBytes = File.ReadAllBytes(manifestFile);
+                    if (options.TryGetValue("sha256", out String? expectedDigest))
+                    {
+                        if (expectedDigest.Length != 64 || !expectedDigest.All(Uri.IsHexDigit))
+                        {
+                            throw new ArgumentException("--sha256 must be exactly 64 hexadecimal characters.");
+                        }
+
+                        String actualDigest = Convert.ToHexString(SHA256.HashData(manifestBytes));
+                        if (!actualDigest.Equals(expectedDigest, StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new InvalidDataException("Manifest SHA-256 does not match the supplied digest.");
+                        }
+                    }
+
+                    using JsonDocument document = JsonDocument.Parse(manifestBytes);
                     RejectDuplicateJsonProperties(document.RootElement);
                     var manifest = document.RootElement.Deserialize<Manifest>(
                         new JsonSerializerOptions { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
@@ -452,7 +469,7 @@ internal static class Program
             "code-fingerprint" => ["in"],
             "compare-code" => ["a", "b"],
             "archive" => ["in", "out", "id"],
-            "check-archive" => ["in", "manifest"],
+            "check-archive" => ["in", "manifest", "sha256"],
             _ => []
         };
 
@@ -543,7 +560,7 @@ internal static class Program
           code-fingerprint --in file.cs
           compare-code  --a original.cs --b suspected.cs
           archive       --in submission-folder --out evidence.json --id submission-123
-          check-archive --in submission-folder --manifest evidence.json
+          check-archive --in submission-folder --manifest evidence.json [--sha256 MANIFEST_DIGEST]
         Set secret as IFP_SECRET environment variable for mark/verify;
         protect it and your manifests; don't commit secrets or private evidence to GitHub.
         """);
