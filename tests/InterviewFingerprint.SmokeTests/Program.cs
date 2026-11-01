@@ -483,8 +483,8 @@ internal static class Program
         JsonNode unicodeFirst = unicodeEntries.First(entry =>
             entry?["Path"]?.GetValue<String>() == "submission.txt")!.DeepClone();
         JsonNode unicodeSecond = unicodeFirst.DeepClone();
-        unicodeFirst["Path"] = "Caf\\u00E9/one.txt";
-        unicodeSecond["Path"] = "Cafe\\u0301/two.txt";
+        unicodeFirst["Path"] = "Caf\u00E9/one.txt";
+        unicodeSecond["Path"] = "Cafe\u0301/two.txt";
         unicodeEntries.Add(unicodeFirst);
         unicodeEntries.Add(unicodeSecond);
         String unicodeTreeManifest = Path.Combine(folder, "unicode-tree-collision.json");
@@ -608,8 +608,8 @@ internal static class Program
 
             // Linux can store composed and decomposed Unicode names separately.
             // Their portable manifest keys must nevertheless be unique.
-            String composedName = Path.Combine(evidence, "Caf\\u00E9.txt");
-            String decomposedName = Path.Combine(evidence, "Cafe\\u0301.txt");
+            String composedName = Path.Combine(evidence, "Caf\u00E9.txt");
+            String decomposedName = Path.Combine(evidence, "Cafe\u0301.txt");
             File.WriteAllText(composedName, "composed");
             File.WriteAllText(decomposedName, "decomposed");
             String unicodeCollisionManifest = Path.Combine(folder, "unicode-collision.json");
