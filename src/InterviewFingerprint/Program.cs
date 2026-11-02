@@ -42,17 +42,18 @@ internal static class Program
                     Watermark.Mark(image, Watermark.Payload(key, id), strength);
                     Directory.CreateDirectory(outputDirectory);
                     EvidenceFiles.RejectLinkedAncestors(outputDirectory);
+                    String markedDigest;
                     using (SKImage marked = SKImage.FromBitmap(image))
                     using (SKData encoded = marked.Encode(SKEncodedImageFormat.Png, 100))
                     {
                         // A failed PNG write must not publish a partial marked image.
-                        WriteNewFileAtomically(output, stream =>
+                        markedDigest = WriteNewFileAtomically(output, stream =>
                         {
                             encoded.SaveTo(stream);
                         });
                     }
                     Console.WriteLine($"Marked PNG: {JsonSerializer.Serialize(output)}");
-                    Console.WriteLine($"SHA-256: {HashFile(output)}");
+                    Console.WriteLine($"SHA-256: {markedDigest}");
                     Console.WriteLine("Keep the secret key private. Test verification on the delivered copy.");
                     return 0;
                 }
@@ -189,12 +190,12 @@ internal static class Program
                     EvidenceFiles.RejectLinkedAncestors(Path.GetDirectoryName(fullOutput)!);
                     // Write a complete temporary manifest before publishing it. A failed
                     // serialization must not leave a partial file at the requested path.
-                    WriteNewFileAtomically(fullOutput, stream =>
+                    String manifestDigest = WriteNewFileAtomically(fullOutput, stream =>
                     {
                         JsonSerializer.Serialize(stream, record, new JsonSerializerOptions { WriteIndented = true });
                     });
                     Console.WriteLine($"Archived {files.Length} file hashes: {JsonSerializer.Serialize(output)}");
-                    Console.WriteLine($"Manifest SHA-256: {HashFile(fullOutput)}");
+                    Console.WriteLine($"Manifest SHA-256: {manifestDigest}");
                     Console.WriteLine("Preserve the manifest digest independently with the original files, email headers, and a trustworthy external timestamp.");
                     return 0;
                 }
@@ -502,8 +503,10 @@ internal static class Program
         }
     }
     // Publish a completed file by renaming it within the same directory.
+    // Return the digest of the completed temporary file, not a later re-read
+    // of a published destination that another process may have changed.
     // File.Move without overwrite preserves an existing destination.
-    private static void WriteNewFileAtomically(String output, Action<FileStream> write)
+    private static String WriteNewFileAtomically(String output, Action<FileStream> write)
     {
         String fullOutput = Path.GetFullPath(output);
         String directory = Path.GetDirectoryName(fullOutput)!;
@@ -518,8 +521,12 @@ internal static class Program
                 stream.Flush(flushToDisk: true);
             }
 
+            EvidenceFiles.RejectLinkedAncestors(temporary);
+            String digest = HashFile(temporary);
             EvidenceFiles.RejectLinkedAncestors(directory);
+            EvidenceFiles.RejectLinkedAncestors(temporary);
             File.Move(temporary, fullOutput);
+            return digest;
         }
         finally
         {
