@@ -14,7 +14,30 @@ internal static class CliRunner
             RedirectStandardError = true,
             UseShellExecute = false
         };
-        process.StartInfo.ArgumentList.Add(typeof(InterviewFingerprint.Program).Assembly.Location);
+        // A project reference copies the CLI DLL, but may not copy its runtimeconfig
+        // or deps file. Explicitly supply the test executable's runtime metadata
+        // so the child process works from standard dotnet test output directories.
+        String application = typeof(InterviewFingerprint.Program).Assembly.Location;
+        String runtimeConfiguration = Path.ChangeExtension(application, ".runtimeconfig.json");
+        String dependencyManifest = Path.ChangeExtension(application, ".deps.json");
+        if (!File.Exists(runtimeConfiguration) || !File.Exists(dependencyManifest))
+        {
+            String testAssembly = typeof(CliRunner).Assembly.Location;
+            runtimeConfiguration = Path.ChangeExtension(testAssembly, ".runtimeconfig.json");
+            dependencyManifest = Path.ChangeExtension(testAssembly, ".deps.json");
+        }
+
+        if (!File.Exists(runtimeConfiguration) || !File.Exists(dependencyManifest))
+        {
+            throw new FileNotFoundException("Cannot find .NET runtime metadata for the CLI integration test.");
+        }
+
+        process.StartInfo.ArgumentList.Add("exec");
+        process.StartInfo.ArgumentList.Add("--runtimeconfig");
+        process.StartInfo.ArgumentList.Add(runtimeConfiguration);
+        process.StartInfo.ArgumentList.Add("--depsfile");
+        process.StartInfo.ArgumentList.Add(dependencyManifest);
+        process.StartInfo.ArgumentList.Add(application);
         foreach (String argument in arguments)
         {
             process.StartInfo.ArgumentList.Add(argument);
