@@ -458,6 +458,21 @@ internal static class Program
             File.Delete(linkedManifest);
         }
 
+        // A sparse oversized manifest must be rejected before allocating or parsing it.
+        String oversizedManifest = Path.Combine(folder, "oversized-manifest.json");
+        using (FileStream oversized = File.Create(oversizedManifest))
+        {
+            oversized.SetLength(64L * 1024 * 1024 + 1);
+        }
+
+        (Int32 oversizedExit, String oversizedOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", oversizedManifest);
+        Require(oversizedExit == 2 &&
+            oversizedOutput.Contains("64 MiB size limit", StringComparison.Ordinal) &&
+            !oversizedOutput.Contains("OK ", StringComparison.Ordinal),
+            "Oversized manifests must be rejected before parsing: " + oversizedOutput);
+        File.Delete(oversizedManifest);
+
         String originalManifestJson = File.ReadAllText(manifest);
         String modifiedManifest = Path.Combine(folder, "manifest-modified.json");
         File.WriteAllText(modifiedManifest, originalManifestJson + "\n");
