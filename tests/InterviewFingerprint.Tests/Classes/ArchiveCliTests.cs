@@ -49,6 +49,34 @@ public sealed class ArchiveCliTests
     }
 
     [Fact]
+    public async Task ArchiveCheckDetectsAddedAndRemovedFiles()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String evidence = CreateSyntheticSubmission(directory.Root);
+        String manifest = Path.Combine(directory.Root, "manifest.json");
+        CliResult archived = await CliRunner.RunAsync(null,
+            "archive", "--in", evidence, "--out", manifest, "--id", "synthetic-inventory");
+        Assert.Equal(0, archived.ExitCode);
+
+        String trustedDigest = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(manifest)));
+        String extraFile = Path.Combine(evidence, "unrecorded.txt");
+        File.WriteAllText(extraFile, "Synthetic extra file.");
+        CliResult added = await CliRunner.RunAsync(null,
+            "check-archive", "--in", evidence, "--manifest", manifest, "--sha256", trustedDigest);
+        Assert.Equal(1, added.ExitCode);
+        Assert.Contains("EXTRA \"unrecorded.txt\"", added.Output);
+        Assert.Contains("1 unrecorded files", added.Output);
+
+        File.Delete(extraFile);
+        File.Delete(Path.Combine(evidence, "sample.txt"));
+        CliResult removed = await CliRunner.RunAsync(null,
+            "check-archive", "--in", evidence, "--manifest", manifest, "--sha256", trustedDigest);
+        Assert.Equal(1, removed.ExitCode);
+        Assert.Contains("CHANGED/MISSING \"sample.txt\"", removed.Output);
+        Assert.Contains("0 unrecorded files", removed.Output);
+    }
+
+    [Fact]
     public async Task ChangedManifestDigestFailsBeforeReportingAnyMatches()
     {
         using TemporaryDirectory directory = new TemporaryDirectory();
