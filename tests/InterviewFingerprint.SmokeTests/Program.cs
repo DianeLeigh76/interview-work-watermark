@@ -93,8 +93,12 @@ internal static class Program
             data.SaveTo(output);
         }
 
-        RequireExit(application, 0, "mark", "--in", input, "--out", marked, "--id", "submission-one", "--strength", "48");
-        Require(File.Exists(marked), "mark did not produce a PNG");
+        (Int32 markExit, String markOutput) = Execute(application,
+            "mark", "--in", input, "--out", marked, "--id", "submission-one", "--strength", "48");
+        Require(markExit == 0 && File.Exists(marked), "mark did not produce a PNG: " + markOutput);
+        String markedDigest = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(marked)));
+        Require(markOutput.Contains("SHA-256: " + markedDigest, StringComparison.Ordinal),
+            "Mark must report the digest of the completed PNG: " + markOutput);
         // A weak environment secret must fail before creating a marked file.
         String shortSecretOutput = Path.Combine(folder, "short-secret.png");
         (Int32 shortSecretExit, String shortSecretLog) = ExecuteWithSecret(application,
