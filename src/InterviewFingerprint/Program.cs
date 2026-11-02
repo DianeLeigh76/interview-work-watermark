@@ -12,6 +12,7 @@ namespace InterviewFingerprint;
 internal static class Program
 {
     private const Int32 PayloadBits = 64;
+    private const Int64 MaxManifestBytes = 64L * 1024 * 1024;
 
     public static Int32 Main(String[] arguments)
     {
@@ -193,7 +194,7 @@ internal static class Program
                     String manifestDigest = WriteNewFileAtomically(fullOutput, stream =>
                     {
                         JsonSerializer.Serialize(stream, record, new JsonSerializerOptions { WriteIndented = true });
-                    });
+                    }, MaxManifestBytes);
                     Console.WriteLine($"Archived {files.Length} file hashes: {JsonSerializer.Serialize(output)}");
                     Console.WriteLine($"Manifest SHA-256: {manifestDigest}");
                     Console.WriteLine("Preserve the manifest digest independently with the original files, email headers, and a trustworthy external timestamp.");
@@ -221,7 +222,7 @@ internal static class Program
                     EvidenceFiles.RejectLinkedAncestors(manifestFile);
                     // Hash and parse the same manifest bytes, so the supplied digest
                     // cannot be checked against a different file read.
-                    Byte[] manifestBytes = File.ReadAllBytes(manifestFile);
+                    Byte[] manifestBytes = ReadManifestBytes(manifestFile);
                     if (expectedDigest is not null)
                     {
                         String actualDigest = Convert.ToHexString(SHA256.HashData(manifestBytes));
@@ -506,7 +507,8 @@ internal static class Program
     // Return the digest of the completed temporary file, not a later re-read
     // of a published destination that another process may have changed.
     // File.Move without overwrite preserves an existing destination.
-    private static String WriteNewFileAtomically(String output, Action<FileStream> write)
+    private static String WriteNewFileAtomically(
+        String output, Action<FileStream> write, Int64? maxBytes = null)
     {
         String fullOutput = Path.GetFullPath(output);
         String directory = Path.GetDirectoryName(fullOutput)!;
@@ -518,6 +520,11 @@ internal static class Program
             using (FileStream stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
                 write(stream);
+                if (maxBytes.HasValue && stream.Length > maxBytes.Value)
+                {
+                    throw new InvalidDataException("Manifest exceeds the 64 MiB size limit.");
+                }
+
                 stream.Flush(flushToDisk: true);
             }
 
@@ -535,6 +542,26 @@ internal static class Program
                 File.Delete(temporary);
             }
         }
+    }
+
+    // Read at most 64 MiB, including if the file grows while it is being read.
+    // Hashing and parsing will use this same bounded byte snapshot.
+    private static Byte[] ReadManifestBytes(String path)
+    {
+        using FileStream stream = File.OpenRead(path);
+        if (stream.Length > MaxManifestBytes)
+        {
+            throw new InvalidDataException("Manifest exceeds the 64 MiB size limit.");
+        }
+
+        Byte[] bytes = new Byte[(Int32)stream.Length];
+        stream.ReadExactly(bytes);
+        if (stream.ReadByte() != -1)
+        {
+            throw new InvalidDataException("Manifest changed length while being read.");
+        }
+
+        return bytes;
     }
 
     private static String HashFile(String path)
