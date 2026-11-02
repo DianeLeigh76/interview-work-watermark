@@ -430,6 +430,30 @@ internal static class Program
                 "Malformed independent manifest digest must be rejected: " + invalidDigestOutput);
         }
 
+        // Invalid digests must fail before trying to open even a missing manifest.
+        String missingManifest = Path.Combine(folder, "missing-manifest.json");
+        (Int32 invalidBeforeReadExit, String invalidBeforeReadOutput) = Execute(application,
+            "check-archive", "--in", evidence, "--manifest", missingManifest, "--sha256", "invalid");
+        Require(invalidBeforeReadExit == 2 &&
+            invalidBeforeReadOutput.Contains("--sha256 must be exactly 64 hexadecimal characters",
+                StringComparison.Ordinal) &&
+            !invalidBeforeReadOutput.Contains("OK ", StringComparison.Ordinal),
+            "Malformed digest must be rejected before reading a manifest: " + invalidBeforeReadOutput);
+
+        // A linked manifest must not silently redirect verification to another file.
+        if (!OperatingSystem.IsWindows())
+        {
+            String linkedManifest = Path.Combine(folder, "linked-manifest.json");
+            File.CreateSymbolicLink(linkedManifest, manifest);
+            (Int32 linkedManifestExit, String linkedManifestOutput) = Execute(application,
+                "check-archive", "--in", evidence, "--manifest", linkedManifest);
+            Require(linkedManifestExit == 2 &&
+                linkedManifestOutput.Contains("symbolic link or junction", StringComparison.Ordinal) &&
+                !linkedManifestOutput.Contains("OK ", StringComparison.Ordinal),
+                "Manifest symbolic links must be rejected: " + linkedManifestOutput);
+            File.Delete(linkedManifest);
+        }
+
         String originalManifestJson = File.ReadAllText(manifest);
         String modifiedManifest = Path.Combine(folder, "manifest-modified.json");
         File.WriteAllText(modifiedManifest, originalManifestJson + "\n");
