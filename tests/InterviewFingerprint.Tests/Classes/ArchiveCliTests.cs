@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using InterviewFingerprint.Tests.Records;
 using Xunit;
 
@@ -93,6 +94,37 @@ public sealed class ArchiveCliTests
         Assert.Equal(2, verified.ExitCode);
         Assert.Contains("Manifest SHA-256 does not match", verified.Output);
         Assert.DoesNotContain("OK \"", verified.Output);
+    }
+
+    [Fact]
+    public async Task MalformedManifestPathsFailWithoutReportingSuccessfulEvidence()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String evidence = CreateSyntheticSubmission(directory.Root);
+        String manifest = Path.Combine(directory.Root, "manifest.json");
+        CliResult archived = await CliRunner.RunAsync(null,
+            "archive", "--in", evidence, "--out", manifest, "--id", "synthetic-path-validation");
+        Assert.Equal(0, archived.ExitCode);
+        String originalJson = File.ReadAllText(manifest);
+
+        JsonNode traversal = JsonNode.Parse(originalJson)!;
+        traversal["Files"]!.AsArray()[0]!["Path"] = "../escape.txt";
+        File.WriteAllText(manifest, traversal.ToJsonString());
+        CliResult escaped = await CliRunner.RunAsync(null,
+            "check-archive", "--in", evidence, "--manifest", manifest);
+        Assert.Equal(2, escaped.ExitCode);
+        Assert.Contains("non-canonical relative path", escaped.Output);
+        Assert.DoesNotContain("OK \"", escaped.Output);
+
+        JsonNode duplicate = JsonNode.Parse(originalJson)!;
+        JsonArray entries = duplicate["Files"]!.AsArray();
+        entries[1]!["Path"] = entries[0]!["Path"]!.GetValue<String>();
+        File.WriteAllText(manifest, duplicate.ToJsonString());
+        CliResult repeated = await CliRunner.RunAsync(null,
+            "check-archive", "--in", evidence, "--manifest", manifest);
+        Assert.Equal(2, repeated.ExitCode);
+        Assert.Contains("duplicate file paths", repeated.Output);
+        Assert.DoesNotContain("OK \"", repeated.Output);
     }
 
     [Fact]
