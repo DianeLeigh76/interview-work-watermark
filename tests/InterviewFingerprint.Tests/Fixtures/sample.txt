@@ -1,0 +1,2 @@
+Synthetic evidence fixture for InterviewFingerprint tests.
+Contains no private candidate or submission information.

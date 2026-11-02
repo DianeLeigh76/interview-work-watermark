@@ -11,6 +11,7 @@
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" PrivateAssets="all" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" PrivateAssets="all" />
+    <None Update="Fixtures/**/*" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../../src/InterviewFingerprint/InterviewFingerprint.csproj" />
   </ItemGroup>
 </Project>

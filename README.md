@@ -113,6 +113,21 @@ Remove-Item Env:IFP_SECRET
 ### Important limitations
 
 The image method rejects transparent pixels but still has known limitations with clipped RGB values, altered geometry, JPEG damage, and adversarial removal. Archive manifests do not carry trustworthy timestamps or digital signatures and may be manipulated; the evidence archive is **integrity-checking assistance, not chain-of-custody proof**. Do not rely on the tool alone in legal proceedings.
+## Standard local xUnit tests
+
+A conventional **xUnit v3** project, `tests/InterviewFingerprint.Tests`, now accompanies the original standalone smoke-test executable. The new suite uses synthetic code, images, text and PDF fixtures; independently verifies SHA-256 values, tests watermark acceptance boundaries and detects archive tampering. No candidate submissions or real secrets are included.
+
+From the repository root with the .NET 10 SDK installed:
+
+```powershell
+dotnet restore InterviewFingerprint.slnx
+dotnet test InterviewFingerprint.slnx --configuration Release --no-restore
+```
+
+The tests are discoverable through the VSTest adapter and Visual Studio Test Explorer. **The older smoke-test executable is not invoked by `dotnet test`**; run the separate commands below for its larger regression matrix and image robustness diagnostics.
+
+Exact byte integrity and lossless round trips must match exactly. Diagnostic similarity thresholds must not weaken keyed verification or be mistaken for evidence of copying. These tests have **not been compiled or run** in the automation environment because the .NET 10 SDK is unavailable; users must validate them locally.
+
 ## Manual local verification (no hosted CI)
 
 No GitHub Actions workflows or paid hosted build services are configured. From the repository root, on a machine with the .NET 10 SDK installed, run the following **locally**. Package restore may need to download the open-source dependencies unless they are already cached; it does not configure a hosted build service.
