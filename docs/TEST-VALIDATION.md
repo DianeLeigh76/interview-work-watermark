@@ -42,7 +42,7 @@ For each local run, retain the SDK version, operating system, command line (excl
 
 ## Checkpoint 1: repeatable local execution
 
-Run the solution tests on a local .NET 10 installation before interpreting any recovery result. Keep a separate, immutable copy of each synthetic input. Record the exact command, SDK version (`dotnet --version`), OS, test count and failures. A test that was only inspected or compiled is not a passing test. Keep the original standalone smoke runner separate from the xUnit results; `dotnet test` alone does not run its robustness matrix.
+Run the solution tests on a local .NET 10 installation before interpreting any recovery result. Keep a separate, immutable copy of each synthetic input. Record the exact command, SDK version (`dotnet --version`), OS, test count and failures. A test that was only inspected or compiled is not a passing test. Capture the process exit code for each command; a written report or partial console output is not proof that the test process succeeded. Keep the original standalone smoke runner separate from the xUnit results; `dotnet test` alone does not run its robustness matrix.
 
 ## Checkpoint 2: threshold calibration, not threshold guessing
 
