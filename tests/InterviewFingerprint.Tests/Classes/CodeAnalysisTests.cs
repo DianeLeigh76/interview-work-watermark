@@ -60,6 +60,24 @@ public sealed class CodeAnalysisTests
         Assert.True(comparison.TokenCountA < 5);
     }
 
+
+    [Fact]
+    public void Utf8BomChangesExactHashButNotSyntaxHash()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "utf8-bom.cs");
+        String secondPath = Path.Combine(directory.Root, "utf8-no-bom.cs");
+        String source = "class Example { Int32 Count = 3; }";
+        File.WriteAllText(firstPath, source, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+        File.WriteAllText(secondPath, source, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        var first = CodeAnalysis.Fingerprint(firstPath);
+        var second = CodeAnalysis.Fingerprint(secondPath);
+        Assert.NotEqual(first.ExactSha256, second.ExactSha256);
+        Assert.Equal(first.SyntaxSha256, second.SyntaxSha256);
+        Assert.True(CodeAnalysis.Compare(firstPath, secondPath).SyntaxIdentical);
+    }
+
     [Fact]
     public void InvalidUtf8CannotBeSilentlyReplaced()
     {
