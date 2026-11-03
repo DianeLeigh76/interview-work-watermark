@@ -78,6 +78,27 @@ public sealed class CodeAnalysisTests
         Assert.True(CodeAnalysis.Compare(firstPath, secondPath).SyntaxIdentical);
     }
 
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Utf16WithBomPreservesSyntaxButNotExactBytes(Boolean bigEndian)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String utf16Path = Path.Combine(directory.Root, "utf16.cs");
+        String utf8Path = Path.Combine(directory.Root, "utf8.cs");
+        String source = "class Example { String Name = \"caf\\u00e9\"; }";
+        File.WriteAllText(utf16Path, source,
+            new UnicodeEncoding(bigEndian: bigEndian, byteOrderMark: true, throwOnInvalidBytes: true));
+        File.WriteAllText(utf8Path, source, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        var utf16 = CodeAnalysis.Fingerprint(utf16Path);
+        var utf8 = CodeAnalysis.Fingerprint(utf8Path);
+        Assert.NotEqual(utf16.ExactSha256, utf8.ExactSha256);
+        Assert.Equal(utf16.SyntaxSha256, utf8.SyntaxSha256);
+        Assert.True(CodeAnalysis.Compare(utf16Path, utf8Path).SyntaxIdentical);
+    }
+
     [Fact]
     public void InvalidUtf8CannotBeSilentlyReplaced()
     {
