@@ -39,3 +39,17 @@ A code comparison can highlight matching tokens, control flow, or unusual edge c
 ## Verification record
 
 For each local run, retain the SDK version, operating system, command line (excluding secrets), test counts, failing test names, and any synthetic diagnostic report. Do not commit private submissions, keys, evidence records, or generated reports. The presence of this document does not mean the suite was compiled or executed.
+
+## Checkpoint 1: repeatable local execution
+
+Run the solution tests on a local .NET 10 installation before interpreting any recovery result. Keep a separate, immutable copy of each synthetic input. Record the exact command, SDK version (`dotnet --version`), OS, test count and failures. A test that was only inspected or compiled is not a passing test. Keep the original standalone smoke runner separate from the xUnit results; `dotnet test` alone does not run its robustness matrix.
+
+## Checkpoint 2: threshold calibration, not threshold guessing
+
+Before choosing a diagnostic threshold, define the measurement: e.g., matching recovered bits divided by *observed* expected bits. Record the observed-bit denominator, the number of missing bits and the algorithm version. Do not score unobserved bits as correct, or silently ignore a low-coverage result. Require a separate minimum coverage gate; high agreement on only a handful of bits is not strong evidence. For a string metric, document whether it is edit distance, exact-character positions or something else; an 87.5% character score is not a watermark confidence score.
+
+Run both positive controls (unchanged marked material, then declared transformations) and negative controls (unmarked material, wrong submission IDs and wrong keys) across multiple synthetic seeds and input types. Keep positives and negatives disjoint when tuning thresholds. Report counts as `detected / total` for each group, with false positives and false negatives separately. Do not treat repeated crops of one image as independent samples. Compare candidate thresholds such as 75% and 90% *without changing production verification logic*. Thresholds selected after inspecting a sample must be evaluated on separate held-out samples before drawing conclusions. No particular threshold is endorsed as statistically validated by this document.
+
+## Checkpoint 3: failure classification and regression review
+
+A failure to decode compressed or transformed content is not automatically evidence of tampering. Only apply explicitly supported reversible decoding before exact comparison; never guess encodings until something looks similar. For intentionally lossy media, preserve both raw score and the specific transformation. Classify an unsupported transform as `inconclusive/unsupported` rather than `verified`, and do not suppress actual regression failures in the test runner. In a controlled negative test, deliberately flip a payload bit, alter a digest or change an ID and confirm the assertion catches the change. If a change unexpectedly passes, investigate the detector and test oracle rather than lowering the threshold.
