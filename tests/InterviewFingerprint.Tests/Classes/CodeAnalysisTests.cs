@@ -99,6 +99,22 @@ public sealed class CodeAnalysisTests
         Assert.True(CodeAnalysis.Compare(utf16Path, utf8Path).SyntaxIdentical);
     }
 
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void InvalidUtf16SurrogateCannotBeSilentlyReplaced(Boolean bigEndian)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String path = Path.Combine(directory.Root, "invalid-utf16.cs");
+        Byte[] malformed = bigEndian
+            ? new Byte[] { 0xFE, 0xFF, 0xD8, 0x00 }
+            : new Byte[] { 0xFF, 0xFE, 0x00, 0xD8 };
+        File.WriteAllBytes(path, malformed);
+
+        Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Fingerprint(path));
+    }
+
     [Fact]
     public void InvalidUtf8CannotBeSilentlyReplaced()
     {
