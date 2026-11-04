@@ -250,4 +250,23 @@ public sealed class CodeAnalysisTests
     }
 
 
+    [Fact]
+    public void SimilarityComparisonIsSymmetric()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "class Example { Int32 Count = 3; Int32 Total = 4; }");
+        File.WriteAllText(secondPath, "class Example { Int32 Count = 3; Int32 Total = 5; }");
+
+        var forward = CodeAnalysis.Compare(firstPath, secondPath);
+        var reverse = CodeAnalysis.Compare(secondPath, firstPath);
+        Assert.Equal(forward.SyntaxIdentical, reverse.SyntaxIdentical);
+        Assert.Equal(forward.Jaccard, reverse.Jaccard);
+        Assert.Equal(forward.Containment, reverse.Containment);
+        Assert.Equal(forward.TokenCountA, reverse.TokenCountB);
+        Assert.Equal(forward.TokenCountB, reverse.TokenCountA);
+    }
+
+
 }
