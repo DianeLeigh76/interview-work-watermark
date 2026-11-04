@@ -203,4 +203,16 @@ public sealed class CodeAnalysisTests
             CodeAnalysis.Fingerprint(secondPath).SyntaxSha256);
     }
 
+    [Theory]
+    [InlineData(0xEF)]
+    [InlineData(0xEF, 0xBB)]
+    public void TruncatedUtf8BomIsRejected(params Byte[] bytes)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String path = Path.Combine(directory.Root, "truncated-bom.cs");
+        File.WriteAllBytes(path, bytes);
+
+        Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Fingerprint(path));
+    }
+
 }
