@@ -169,4 +169,23 @@ public sealed class CodeAnalysisTests
         Assert.Throws<InvalidDataException>(() => CodeAnalysis.Fingerprint(path));
     }
 
+    [Fact]
+    public void CommentOnlyFilesDoNotProducePositiveSimilarityEvidence()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "// First comment only");
+        File.WriteAllText(secondPath, "/* Different comment only */");
+
+        var comparison = CodeAnalysis.Compare(firstPath, secondPath);
+        Assert.True(comparison.SyntaxIdentical);
+        Assert.Equal(0.0, comparison.Jaccard);
+        Assert.Equal(0.0, comparison.Containment);
+        Assert.Equal(0, comparison.TokenCountA);
+        Assert.Equal(0, comparison.TokenCountB);
+        Assert.NotEqual(CodeAnalysis.Fingerprint(firstPath).ExactSha256,
+            CodeAnalysis.Fingerprint(secondPath).ExactSha256);
+    }
+
 }
