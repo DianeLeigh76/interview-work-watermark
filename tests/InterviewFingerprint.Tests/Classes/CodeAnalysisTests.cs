@@ -144,4 +144,19 @@ public sealed class CodeAnalysisTests
         Assert.True(CodeAnalysis.Compare(utf32Path, utf8Path).SyntaxIdentical);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void InvalidUtf32ScalarCannotBeSilentlyReplaced(Boolean bigEndian)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String path = Path.Combine(directory.Root, "invalid-utf32.cs");
+        Byte[] malformed = bigEndian
+            ? new Byte[] { 0x00, 0x00, 0xFE, 0xFF, 0x00, 0x11, 0x00, 0x00 }
+            : new Byte[] { 0xFF, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x11, 0x00 };
+        File.WriteAllBytes(path, malformed);
+
+        Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Fingerprint(path));
+    }
+
 }
