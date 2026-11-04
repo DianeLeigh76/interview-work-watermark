@@ -204,13 +204,14 @@ public sealed class CodeAnalysisTests
     }
 
     [Theory]
-    [InlineData(0xEF)]
-    [InlineData(0xEF, 0xBB)]
-    public void TruncatedUtf8BomIsRejected(params Byte[] bytes)
+    [InlineData(1)]
+    [InlineData(2)]
+    public void TruncatedUtf8BomIsRejected(Int32 byteCount)
     {
         using TemporaryDirectory directory = new TemporaryDirectory();
         String path = Path.Combine(directory.Root, "truncated-bom.cs");
-        File.WriteAllBytes(path, bytes);
+        Byte[] bytes = new Byte[] { 0xEF, 0xBB };
+        File.WriteAllBytes(path, bytes.Take(byteCount).ToArray());
 
         Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Fingerprint(path));
     }
