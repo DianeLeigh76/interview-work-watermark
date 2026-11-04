@@ -234,4 +234,20 @@ public sealed class CodeAnalysisTests
     }
 
 
+    [Fact]
+    public void ChangedStringLiteralIsNotSyntaxIdentical()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "class Example { String Name = \"first\"; }");
+        File.WriteAllText(secondPath, "class Example { String Name = \"second\"; }");
+
+        var comparison = CodeAnalysis.Compare(firstPath, secondPath);
+        Assert.False(comparison.SyntaxIdentical);
+        Assert.NotEqual(CodeAnalysis.Fingerprint(firstPath).SyntaxSha256,
+            CodeAnalysis.Fingerprint(secondPath).SyntaxSha256);
+    }
+
+
 }
