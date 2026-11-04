@@ -159,4 +159,14 @@ public sealed class CodeAnalysisTests
         Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Fingerprint(path));
     }
 
+    [Fact]
+    public void BomlessUtf16CannotBeMistakenForUtf8Source()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String path = Path.Combine(directory.Root, "bomless-utf16.cs");
+        File.WriteAllBytes(path, Encoding.Unicode.GetBytes("class Example { }"));
+
+        Assert.Throws<InvalidDataException>(() => CodeAnalysis.Fingerprint(path));
+    }
+
 }
