@@ -124,4 +124,24 @@ public sealed class CodeAnalysisTests
 
         Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Fingerprint(path));
     }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Utf32WithBomPreservesSyntaxButNotExactBytes(Boolean bigEndian)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String utf32Path = Path.Combine(directory.Root, "utf32.cs");
+        String utf8Path = Path.Combine(directory.Root, "utf8.cs");
+        String source = "class Example { String Name = \"caf\\u00e9\"; }";
+        File.WriteAllText(utf32Path, source,
+            new UTF32Encoding(bigEndian: bigEndian, byteOrderMark: true, throwOnInvalidCharacters: true));
+        File.WriteAllText(utf8Path, source, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        var utf32 = CodeAnalysis.Fingerprint(utf32Path);
+        var utf8 = CodeAnalysis.Fingerprint(utf8Path);
+        Assert.NotEqual(utf32.ExactSha256, utf8.ExactSha256);
+        Assert.Equal(utf32.SyntaxSha256, utf8.SyntaxSha256);
+        Assert.True(CodeAnalysis.Compare(utf32Path, utf8Path).SyntaxIdentical);
+    }
+
 }
