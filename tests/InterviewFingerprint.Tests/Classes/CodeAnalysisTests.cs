@@ -216,4 +216,22 @@ public sealed class CodeAnalysisTests
         Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Fingerprint(path));
     }
 
+    [Fact]
+    public void LineEndingsChangeExactHashButNotSyntaxFingerprint()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "lf.cs");
+        String secondPath = Path.Combine(directory.Root, "crlf.cs");
+        String source = "class Example\n{\n    Int32 Count = 3;\n}\n";
+        File.WriteAllText(firstPath, source, new UTF8Encoding(false));
+        File.WriteAllText(secondPath, source.Replace("\n", "\r\n"), new UTF8Encoding(false));
+
+        var first = CodeAnalysis.Fingerprint(firstPath);
+        var second = CodeAnalysis.Fingerprint(secondPath);
+        Assert.NotEqual(first.ExactSha256, second.ExactSha256);
+        Assert.Equal(first.SyntaxSha256, second.SyntaxSha256);
+        Assert.True(CodeAnalysis.Compare(firstPath, secondPath).SyntaxIdentical);
+    }
+
+
 }
