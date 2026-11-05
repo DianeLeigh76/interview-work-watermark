@@ -284,4 +284,13 @@ public sealed class CodeAnalysisTests
         Assert.Equal(0, comparison.TokenCountA);
         Assert.Equal(0, comparison.TokenCountB);
     }
+
+    [Fact]
+    public void MissingSourceFileIsNotTreatedAsEmptySource()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String missingPath = Path.Combine(directory.Root, "missing.cs");
+
+        Assert.Throws<FileNotFoundException>(() => CodeAnalysis.Fingerprint(missingPath));
+    }
 }
