@@ -381,4 +381,17 @@ public sealed class CodeAnalysisTests
         Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Compare(invalidPath, validPath));
     }
 
+    [Fact]
+    public void BomlessUtf16ComparisonInputThrowsInEitherPosition()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String validPath = Path.Combine(directory.Root, "valid.cs");
+        String invalidPath = Path.Combine(directory.Root, "bomless-utf16.cs");
+        File.WriteAllText(validPath, "class Example { Int32 Count = 3; }");
+        File.WriteAllBytes(invalidPath, Encoding.Unicode.GetBytes("class Example { }"));
+
+        Assert.Throws<InvalidDataException>(() => CodeAnalysis.Compare(validPath, invalidPath));
+        Assert.Throws<InvalidDataException>(() => CodeAnalysis.Compare(invalidPath, validPath));
+    }
+
 }
