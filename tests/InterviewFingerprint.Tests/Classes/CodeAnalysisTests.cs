@@ -268,5 +268,20 @@ public sealed class CodeAnalysisTests
         Assert.Equal(forward.TokenCountB, reverse.TokenCountA);
     }
 
+    [Fact]
+    public void EmptyFilesHaveNoSimilarityEvidence()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "empty-first.cs");
+        String secondPath = Path.Combine(directory.Root, "empty-second.cs");
+        File.WriteAllBytes(firstPath, Array.Empty<Byte>());
+        File.WriteAllBytes(secondPath, Array.Empty<Byte>());
 
+        var comparison = CodeAnalysis.Compare(firstPath, secondPath);
+        Assert.True(comparison.SyntaxIdentical);
+        Assert.Equal(0.0, comparison.Jaccard);
+        Assert.Equal(0.0, comparison.Containment);
+        Assert.Equal(0, comparison.TokenCountA);
+        Assert.Equal(0, comparison.TokenCountB);
+    }
 }
