@@ -293,4 +293,19 @@ public sealed class CodeAnalysisTests
 
         Assert.Throws<FileNotFoundException>(() => CodeAnalysis.Fingerprint(missingPath));
     }
+
+    [Fact]
+    public void DifferentNumericLiteralsChangeSyntaxFingerprint()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "class Example { Int32 Count = 3; }");
+        File.WriteAllText(secondPath, "class Example { Int32 Count = 4; }");
+
+        var comparison = CodeAnalysis.Compare(firstPath, secondPath);
+        Assert.False(comparison.SyntaxIdentical);
+        Assert.NotEqual(CodeAnalysis.Fingerprint(firstPath).SyntaxSha256,
+            CodeAnalysis.Fingerprint(secondPath).SyntaxSha256);
+    }
 }
