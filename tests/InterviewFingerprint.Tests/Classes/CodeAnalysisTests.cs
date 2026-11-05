@@ -340,4 +340,20 @@ public sealed class CodeAnalysisTests
         Assert.Equal(1.0, comparison.Jaccard);
         Assert.Equal(1.0, comparison.Containment);
     }
+    [Fact]
+    public void DisjointTokenSequencesHaveZeroShingleAgreement()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "alpha beta gamma delta epsilon zeta eta theta");
+        File.WriteAllText(secondPath, "one two three four five six seven eight");
+
+        var comparison = CodeAnalysis.Compare(firstPath, secondPath);
+        Assert.False(comparison.SyntaxIdentical);
+        Assert.True(comparison.TokenCountA >= 5);
+        Assert.True(comparison.TokenCountB >= 5);
+        Assert.Equal(0.0, comparison.Jaccard);
+        Assert.Equal(0.0, comparison.Containment);
+    }
 }
