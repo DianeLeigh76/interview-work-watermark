@@ -368,4 +368,17 @@ public sealed class CodeAnalysisTests
         Assert.Throws<FileNotFoundException>(() => CodeAnalysis.Compare(missingPath, existingPath));
     }
 
+    [Fact]
+    public void MalformedUtf8ComparisonInputThrowsInEitherPosition()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String validPath = Path.Combine(directory.Root, "valid.cs");
+        String invalidPath = Path.Combine(directory.Root, "invalid.cs");
+        File.WriteAllText(validPath, "class Example { Int32 Count = 3; }");
+        File.WriteAllBytes(invalidPath, new Byte[] { 0xC3, 0x28 });
+
+        Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Compare(validPath, invalidPath));
+        Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Compare(invalidPath, validPath));
+    }
+
 }
