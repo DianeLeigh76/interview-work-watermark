@@ -356,4 +356,16 @@ public sealed class CodeAnalysisTests
         Assert.Equal(0.0, comparison.Jaccard);
         Assert.Equal(0.0, comparison.Containment);
     }
+    [Fact]
+    public void MissingComparisonInputThrowsInsteadOfReportingSimilarity()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String existingPath = Path.Combine(directory.Root, "existing.cs");
+        String missingPath = Path.Combine(directory.Root, "missing.cs");
+        File.WriteAllText(existingPath, "class Example { Int32 Count = 3; }");
+
+        Assert.Throws<FileNotFoundException>(() => CodeAnalysis.Compare(existingPath, missingPath));
+        Assert.Throws<FileNotFoundException>(() => CodeAnalysis.Compare(missingPath, existingPath));
+    }
+
 }
