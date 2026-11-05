@@ -324,4 +324,20 @@ public sealed class CodeAnalysisTests
         Assert.Equal(0, comparison.TokenCountA);
         Assert.True(comparison.TokenCountB > 0);
     }
+    [Fact]
+    public void IdenticalNonemptySourceHasFullShingleAgreement()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        String source = "class Example { Int32 Count = 3; Int32 Total = 4; }";
+        File.WriteAllText(firstPath, source);
+        File.WriteAllText(secondPath, source);
+
+        var comparison = CodeAnalysis.Compare(firstPath, secondPath);
+        Assert.True(comparison.SyntaxIdentical);
+        Assert.True(comparison.TokenCountA >= 5);
+        Assert.Equal(1.0, comparison.Jaccard);
+        Assert.Equal(1.0, comparison.Containment);
+    }
 }
