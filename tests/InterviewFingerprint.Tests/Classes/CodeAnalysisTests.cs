@@ -448,4 +448,21 @@ public sealed class CodeAnalysisTests
         Assert.Equal(0, reverse.TokenCountB);
     }
 
+    [Fact]
+    public void SharedFiveTokenWindowProducesPartialSimilarity()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "alpha beta gamma delta epsilon zeta");
+        File.WriteAllText(secondPath, "alpha beta gamma delta epsilon theta");
+
+        var comparison = CodeAnalysis.Compare(firstPath, secondPath);
+        Assert.False(comparison.SyntaxIdentical);
+        Assert.True(comparison.Jaccard > 0.0);
+        Assert.True(comparison.Jaccard < 1.0);
+        Assert.True(comparison.Containment > 0.0);
+        Assert.True(comparison.Containment < 1.0);
+    }
+
 }
