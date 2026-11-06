@@ -465,4 +465,20 @@ public sealed class CodeAnalysisTests
         Assert.True(comparison.Containment < 1.0);
     }
 
+    [Fact]
+    public void FullyContainedShingleSetHasFullContainmentButNotFullJaccard()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String shorterPath = Path.Combine(directory.Root, "shorter.cs");
+        String longerPath = Path.Combine(directory.Root, "longer.cs");
+        File.WriteAllText(shorterPath, "alpha beta gamma delta epsilon");
+        File.WriteAllText(longerPath, "alpha beta gamma delta epsilon zeta eta");
+
+        var comparison = CodeAnalysis.Compare(shorterPath, longerPath);
+        Assert.False(comparison.SyntaxIdentical);
+        Assert.Equal(1.0, comparison.Containment);
+        Assert.True(comparison.Jaccard > 0.0);
+        Assert.True(comparison.Jaccard < 1.0);
+    }
+
 }
