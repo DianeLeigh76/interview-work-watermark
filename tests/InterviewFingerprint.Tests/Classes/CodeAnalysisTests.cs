@@ -530,4 +530,20 @@ public sealed class CodeAnalysisTests
     }
 
 
+    [Fact]
+    public void UnicodeIdentifierSpellingChangesSyntaxFingerprint()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "class Example { Int32 café = 3; }");
+        File.WriteAllText(secondPath, "class Example { Int32 cafe = 3; }");
+
+        var comparison = CodeAnalysis.Compare(firstPath, secondPath);
+        Assert.False(comparison.SyntaxIdentical);
+        Assert.NotEqual(CodeAnalysis.Fingerprint(firstPath).SyntaxSha256,
+            CodeAnalysis.Fingerprint(secondPath).SyntaxSha256);
+    }
+
+
 }
