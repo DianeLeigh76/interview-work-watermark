@@ -481,4 +481,21 @@ public sealed class CodeAnalysisTests
         Assert.True(comparison.Jaccard < 1.0);
     }
 
+    [Fact]
+    public void RepeatedShinglesDoNotInflateSimilarity()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "alpha alpha alpha alpha alpha alpha");
+        File.WriteAllText(secondPath, "alpha alpha alpha alpha alpha");
+
+        var comparison = CodeAnalysis.Compare(firstPath, secondPath);
+        Assert.False(comparison.SyntaxIdentical);
+        Assert.Equal(1.0, comparison.Jaccard);
+        Assert.Equal(1.0, comparison.Containment);
+        Assert.Equal(6, comparison.TokenCountA);
+        Assert.Equal(5, comparison.TokenCountB);
+    }
+
 }
