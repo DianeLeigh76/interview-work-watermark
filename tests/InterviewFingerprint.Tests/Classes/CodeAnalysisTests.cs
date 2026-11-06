@@ -394,4 +394,21 @@ public sealed class CodeAnalysisTests
         Assert.Throws<InvalidDataException>(() => CodeAnalysis.Compare(invalidPath, validPath));
     }
 
+    [Fact]
+    public void NonemptySourceComparedWithEmptySourceHasNoSimilarityEvidence()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String emptyPath = Path.Combine(directory.Root, "empty.cs");
+        String populatedPath = Path.Combine(directory.Root, "populated.cs");
+        File.WriteAllBytes(emptyPath, Array.Empty<Byte>());
+        File.WriteAllText(populatedPath, "class Example { Int32 Count = 3; }");
+
+        var comparison = CodeAnalysis.Compare(populatedPath, emptyPath);
+        Assert.False(comparison.SyntaxIdentical);
+        Assert.Equal(0.0, comparison.Jaccard);
+        Assert.Equal(0.0, comparison.Containment);
+        Assert.True(comparison.TokenCountA > 0);
+        Assert.Equal(0, comparison.TokenCountB);
+    }
+
 }
