@@ -411,4 +411,20 @@ public sealed class CodeAnalysisTests
         Assert.Equal(0, comparison.TokenCountB);
     }
 
+    [Fact]
+    public void IdenticalSourceAtDifferentPathsHasEqualExactAndSyntaxHashes()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        String source = "class Example { Int32 Count = 3; Int32 Total = 4; }";
+        File.WriteAllText(firstPath, source);
+        File.WriteAllText(secondPath, source);
+
+        var first = CodeAnalysis.Fingerprint(firstPath);
+        var second = CodeAnalysis.Fingerprint(secondPath);
+        Assert.Equal(first.ExactSha256, second.ExactSha256);
+        Assert.Equal(first.SyntaxSha256, second.SyntaxSha256);
+    }
+
 }
