@@ -427,4 +427,25 @@ public sealed class CodeAnalysisTests
         Assert.Equal(first.SyntaxSha256, second.SyntaxSha256);
     }
 
+    [Fact]
+    public void DifferentCommentOnlyFilesHaveNoSimilarityEvidenceInEitherOrder()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "// alpha");
+        File.WriteAllText(secondPath, "// beta");
+
+        var forward = CodeAnalysis.Compare(firstPath, secondPath);
+        var reverse = CodeAnalysis.Compare(secondPath, firstPath);
+        Assert.Equal(0.0, forward.Jaccard);
+        Assert.Equal(0.0, forward.Containment);
+        Assert.Equal(0.0, reverse.Jaccard);
+        Assert.Equal(0.0, reverse.Containment);
+        Assert.Equal(0, forward.TokenCountA);
+        Assert.Equal(0, forward.TokenCountB);
+        Assert.Equal(0, reverse.TokenCountA);
+        Assert.Equal(0, reverse.TokenCountB);
+    }
+
 }
