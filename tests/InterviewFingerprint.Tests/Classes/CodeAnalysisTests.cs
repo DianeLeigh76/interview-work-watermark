@@ -596,4 +596,19 @@ public sealed class CodeAnalysisTests
         Assert.NotEqual(CodeAnalysis.Fingerprint(firstPath).SyntaxSha256,
             CodeAnalysis.Fingerprint(secondPath).SyntaxSha256);
     }
+
+    [Fact]
+    public void LineEndingsInsideVerbatimStringLiteralChangeSyntaxFingerprint()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        String source = "class Example { String Value = @\"first\nsecond\"; }";
+        File.WriteAllText(firstPath, source, new UTF8Encoding(false));
+        File.WriteAllText(secondPath, source.Replace("\n", "\r\n"), new UTF8Encoding(false));
+
+        Assert.False(CodeAnalysis.Compare(firstPath, secondPath).SyntaxIdentical);
+        Assert.NotEqual(CodeAnalysis.Fingerprint(firstPath).SyntaxSha256,
+            CodeAnalysis.Fingerprint(secondPath).SyntaxSha256);
+    }
 }
