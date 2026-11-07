@@ -641,4 +641,17 @@ public sealed class CodeAnalysisTests
 
         Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Fingerprint(path));
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Utf16SourceContainingNullCharacterIsRejected(Boolean bigEndian)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String path = Path.Combine(directory.Root, "nul-utf16.cs");
+        File.WriteAllText(path, "class Example { }\0",
+            new UnicodeEncoding(bigEndian: bigEndian, byteOrderMark: true, throwOnInvalidBytes: true));
+
+        Assert.Throws<InvalidDataException>(() => CodeAnalysis.Fingerprint(path));
+    }
 }
