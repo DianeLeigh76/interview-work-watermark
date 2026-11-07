@@ -569,5 +569,17 @@ public sealed class CodeAnalysisTests
         Assert.Throws<InvalidDataException>(() => CodeAnalysis.Fingerprint(path));
     }
 
+    [Fact]
+    public void CommentsBetweenTokensDoNotChangeSyntaxFingerprint()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "class Example { Int32 Count = 3; }");
+        File.WriteAllText(secondPath, "class /* explanation */ Example { Int32 /* note */ Count = 3; }");
 
+        Assert.Equal(CodeAnalysis.Fingerprint(firstPath).SyntaxSha256,
+            CodeAnalysis.Fingerprint(secondPath).SyntaxSha256);
+        Assert.True(CodeAnalysis.Compare(firstPath, secondPath).SyntaxIdentical);
+    }
 }
