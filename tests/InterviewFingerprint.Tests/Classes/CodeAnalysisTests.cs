@@ -559,4 +559,15 @@ public sealed class CodeAnalysisTests
     }
 
 
+    [Fact]
+    public void Utf8SourceContainingNullCharacterIsRejected()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String path = Path.Combine(directory.Root, "nul.cs");
+        File.WriteAllBytes(path, new Byte[] { 0x63, 0x6C, 0x61, 0x73, 0x73, 0x00 });
+
+        Assert.Throws<InvalidDataException>(() => CodeAnalysis.Fingerprint(path));
+    }
+
+
 }
