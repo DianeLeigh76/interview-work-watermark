@@ -546,4 +546,17 @@ public sealed class CodeAnalysisTests
     }
 
 
+    [Fact]
+    public void CommentMarkersInsideStringLiteralsRemainSignificant()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "class Example { String Url = \"https://example.test/a\"; }");
+        File.WriteAllText(secondPath, "class Example { String Url = \"https://example.test/b\"; }");
+
+        Assert.False(CodeAnalysis.Compare(firstPath, secondPath).SyntaxIdentical);
+    }
+
+
 }
