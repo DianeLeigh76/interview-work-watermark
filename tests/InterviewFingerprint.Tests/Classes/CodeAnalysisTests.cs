@@ -582,4 +582,18 @@ public sealed class CodeAnalysisTests
             CodeAnalysis.Fingerprint(secondPath).SyntaxSha256);
         Assert.True(CodeAnalysis.Compare(firstPath, secondPath).SyntaxIdentical);
     }
+
+    [Fact]
+    public void DisabledPreprocessorBranchTextChangesSyntaxFingerprint()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String firstPath = Path.Combine(directory.Root, "first.cs");
+        String secondPath = Path.Combine(directory.Root, "second.cs");
+        File.WriteAllText(firstPath, "#if false\nclass Hidden { Int32 Value = 1; }\n#endif\nclass Visible { }");
+        File.WriteAllText(secondPath, "#if false\nclass Hidden { Int32 Value = 2; }\n#endif\nclass Visible { }");
+
+        Assert.False(CodeAnalysis.Compare(firstPath, secondPath).SyntaxIdentical);
+        Assert.NotEqual(CodeAnalysis.Fingerprint(firstPath).SyntaxSha256,
+            CodeAnalysis.Fingerprint(secondPath).SyntaxSha256);
+    }
 }
