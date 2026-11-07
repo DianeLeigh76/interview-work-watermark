@@ -107,7 +107,8 @@ internal static class CodeAnalysis
         var result = new HashSet<String>(StringComparer.Ordinal);
         for (Int32 index = 0; index + k <= tokens.Length; index++)
         {
-            result.Add(Digest(tokens.Skip(index).Take(k)));
+            // Hash the fixed window without allocating an intermediate token array.
+            result.Add(Digest(Enumerable.Range(index, k).Select(offset => tokens[offset])));
         }
         return result;
     }
