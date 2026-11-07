@@ -611,4 +611,19 @@ public sealed class CodeAnalysisTests
         Assert.NotEqual(CodeAnalysis.Fingerprint(firstPath).SyntaxSha256,
             CodeAnalysis.Fingerprint(secondPath).SyntaxSha256);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TruncatedUtf16CodeUnitIsRejected(Boolean bigEndian)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String path = Path.Combine(directory.Root, "truncated-utf16.cs");
+        Byte[] malformed = bigEndian
+            ? new Byte[] { 0xFE, 0xFF, 0x00 }
+            : new Byte[] { 0xFF, 0xFE, 0x00 };
+        File.WriteAllBytes(path, malformed);
+
+        Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Fingerprint(path));
+    }
 }
