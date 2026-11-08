@@ -14,14 +14,19 @@ internal static class Program
 
     private static Int32 Main(String[] arguments)
     {
-        if (arguments.Length != 1 &&
+        // F5 / Ctrl+F5 in Visual Studio can run smoke tests without manual arguments.
+        // The project reference makes the application assembly available in the output.
+        if (arguments.Length != 0 &&
+            arguments.Length != 1 &&
             (arguments.Length != 3 || arguments[1] != "--report"))
         {
-            Console.Error.WriteLine("Usage: SmokeTests <path-to-InterviewFingerprint.dll> [--report path.json]");
+            Console.Error.WriteLine("Usage: SmokeTests [<path-to-InterviewFingerprint.dll> [--report path.json]]");
             return 2;
         }
 
-        String application = Path.GetFullPath(arguments[0]);
+        String application = arguments.Length == 0
+            ? System.Reflection.Assembly.Load("InterviewFingerprint").Location
+            : Path.GetFullPath(arguments[0]);
         if (!File.Exists(application))
         {
             Console.Error.WriteLine("CLI DLL not found: " + application);
