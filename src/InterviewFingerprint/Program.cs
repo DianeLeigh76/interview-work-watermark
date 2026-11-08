@@ -257,8 +257,6 @@ internal static class Program
         }
 
         String root = Path.GetFullPath(input);
-        StringComparer pathComparer = OperatingSystem.IsWindows()
-            ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         // Reject case-only duplicates even on case-sensitive Unix hosts.
         HashSet<String> expected = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
         List<(String File, String Relative, FileRecord Record)> validated = new();
@@ -282,14 +280,7 @@ internal static class Program
         // Re-enumerate after hashing. An addition, removal or link swap
         // during a long check must not yield an apparently complete report.
         // This remains a best-effort check, not an atomic snapshot.
-        HashSet<String> initialPaths = new HashSet<String>(actualPaths, pathComparer);
-        HashSet<String> finalPaths = new HashSet<String>(
-            EvidenceFiles.Enumerate(root)
-                .Select(file => EvidenceFiles.ToManifestPath(root, file)), pathComparer);
-        if (!initialPaths.SetEquals(finalPaths))
-        {
-            throw new InvalidDataException("Evidence file list changed during verification.");
-        }
+        ValidateVerificationInventory(root, actualPaths);
 
         return ReportArchiveResults(results, actualPaths, expected, manifest.Files.Length);
     }
@@ -341,6 +332,20 @@ internal static class Program
         }
 
         return results;
+    }
+
+    private static void ValidateVerificationInventory(String root, String[] actualPaths)
+    {
+            StringComparer pathComparer = OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        HashSet<String> initialPaths = new HashSet<String>(actualPaths, pathComparer);
+        HashSet<String> finalPaths = new HashSet<String>(
+            EvidenceFiles.Enumerate(root)
+                .Select(file => EvidenceFiles.ToManifestPath(root, file)), pathComparer);
+        if (!initialPaths.SetEquals(finalPaths))
+        {
+            throw new InvalidDataException("Evidence file list changed during verification.");
+        }
     }
 
     private static Int32 VerifyImage(Dictionary<String, String> options)
