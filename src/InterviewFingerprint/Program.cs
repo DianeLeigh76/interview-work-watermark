@@ -336,8 +336,8 @@ internal static class Program
 
     private static void ValidateVerificationInventory(String root, String[] actualPaths)
     {
-            StringComparer pathComparer = OperatingSystem.IsWindows()
-                ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        StringComparer pathComparer = OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         HashSet<String> initialPaths = new HashSet<String>(actualPaths, pathComparer);
         HashSet<String> finalPaths = new HashSet<String>(
             EvidenceFiles.Enumerate(root)
