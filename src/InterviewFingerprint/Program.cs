@@ -73,241 +73,241 @@ internal static class Program
 
     private static Int32 MarkImage(Dictionary<String, String> options)
     {
-            String input = Required(options, "in");
-            String output = Required(options, "out");
-            String key = Secret();
-            String id = Required(options, "id");
-            Double strength = GetStrength(options);
-            CheckDistinct(input, output);
-            String outputDirectory = Path.GetDirectoryName(Path.GetFullPath(output))!;
-            // Do not silently place a marked image through a linked output parent.
-            EvidenceFiles.RejectLinkedAncestors(outputDirectory);
-            using SKBitmap image = SKBitmap.Decode(input) ?? throw new InvalidDataException("Unable to decode input image.");
-            Watermark.Mark(image, Watermark.Payload(key, id), strength);
-            Directory.CreateDirectory(outputDirectory);
-            EvidenceFiles.RejectLinkedAncestors(outputDirectory);
-            String markedDigest;
-            using (SKImage marked = SKImage.FromBitmap(image))
-            using (SKData encoded = marked.Encode(SKEncodedImageFormat.Png, 100))
+        String input = Required(options, "in");
+        String output = Required(options, "out");
+        String key = Secret();
+        String id = Required(options, "id");
+        Double strength = GetStrength(options);
+        CheckDistinct(input, output);
+        String outputDirectory = Path.GetDirectoryName(Path.GetFullPath(output))!;
+        // Do not silently place a marked image through a linked output parent.
+        EvidenceFiles.RejectLinkedAncestors(outputDirectory);
+        using SKBitmap image = SKBitmap.Decode(input) ?? throw new InvalidDataException("Unable to decode input image.");
+        Watermark.Mark(image, Watermark.Payload(key, id), strength);
+        Directory.CreateDirectory(outputDirectory);
+        EvidenceFiles.RejectLinkedAncestors(outputDirectory);
+        String markedDigest;
+        using (SKImage marked = SKImage.FromBitmap(image))
+        using (SKData encoded = marked.Encode(SKEncodedImageFormat.Png, 100))
+        {
+            // A failed PNG write must not publish a partial marked image.
+            markedDigest = WriteNewFileAtomically(output, stream =>
             {
-                // A failed PNG write must not publish a partial marked image.
-                markedDigest = WriteNewFileAtomically(output, stream =>
-                {
-                    encoded.SaveTo(stream);
-                });
-            }
-            Console.WriteLine($"Marked PNG: {JsonSerializer.Serialize(output)}");
-            Console.WriteLine($"SHA-256: {markedDigest}");
-            Console.WriteLine("Keep the secret key private. Test verification on the delivered copy.");
-            return 0;
+                encoded.SaveTo(stream);
+            });
+        }
+        Console.WriteLine($"Marked PNG: {JsonSerializer.Serialize(output)}");
+        Console.WriteLine($"SHA-256: {markedDigest}");
+        Console.WriteLine("Keep the secret key private. Test verification on the delivered copy.");
+        return 0;
     }
 
     private static Int32 FingerprintCode(Dictionary<String, String> options)
     {
-            var result = CodeAnalysis.Fingerprint(Required(options, "in"));
-            Console.WriteLine($"Exact SHA-256: {result.ExactSha256}");
-            Console.WriteLine($"Syntax token SHA-256: {result.SyntaxSha256}");
-            Console.WriteLine($"Tokens: {result.TokenCount}");
-            Console.WriteLine("Syntax fingerprint ignores comments and spacing; it does not prove authorship.");
-            return 0;
+        var result = CodeAnalysis.Fingerprint(Required(options, "in"));
+        Console.WriteLine($"Exact SHA-256: {result.ExactSha256}");
+        Console.WriteLine($"Syntax token SHA-256: {result.SyntaxSha256}");
+        Console.WriteLine($"Tokens: {result.TokenCount}");
+        Console.WriteLine("Syntax fingerprint ignores comments and spacing; it does not prove authorship.");
+        return 0;
     }
 
     private static Int32 CompareCode(Dictionary<String, String> options)
     {
-            var result = CodeAnalysis.Compare(Required(options, "a"), Required(options, "b"));
-            Console.WriteLine($"Syntax-identical: {result.SyntaxIdentical}");
-            Console.WriteLine($"Shared five-token shingles (Jaccard): {result.Jaccard:P2}");
-            Console.WriteLine($"Containment of smaller shingle set: {result.Containment:P2}");
-            Console.WriteLine($"Tokens A/B: {result.TokenCountA}/{result.TokenCountB}");
-            if (result.TokenCountA < 5 || result.TokenCountB < 5)
-            {
-                Console.WriteLine("WARNING: Too few tokens for reliable five-token shingle comparison.");
-            }
+        var result = CodeAnalysis.Compare(Required(options, "a"), Required(options, "b"));
+        Console.WriteLine($"Syntax-identical: {result.SyntaxIdentical}");
+        Console.WriteLine($"Shared five-token shingles (Jaccard): {result.Jaccard:P2}");
+        Console.WriteLine($"Containment of smaller shingle set: {result.Containment:P2}");
+        Console.WriteLine($"Tokens A/B: {result.TokenCountA}/{result.TokenCountB}");
+        if (result.TokenCountA < 5 || result.TokenCountB < 5)
+        {
+            Console.WriteLine("WARNING: Too few tokens for reliable five-token shingle comparison.");
+        }
 
-            Console.WriteLine("Similarity is supporting investigative evidence only, not proof of copying.");
-            return 0;
+        Console.WriteLine("Similarity is supporting investigative evidence only, not proof of copying.");
+        return 0;
     }
 
     private static Int32 CreateArchive(Dictionary<String, String> options)
     {
-            String input = Required(options, "in");
-            String output = Required(options, "out");
-            String id = Required(options, "id");
-            if (!Directory.Exists(input))
+        String input = Required(options, "in");
+        String output = Required(options, "out");
+        String id = Required(options, "id");
+        if (!Directory.Exists(input))
+        {
+            throw new ArgumentException("--in must be a directory.");
+        }
+        String fullInput = Path.GetFullPath(input);
+        String fullOutput = Path.GetFullPath(output);
+        String outputRelative = Path.GetRelativePath(fullInput, fullOutput);
+        if (outputRelative == "." ||
+            (outputRelative != ".." &&
+             !outputRelative.StartsWith(".." + Path.DirectorySeparatorChar, PathComparison) &&
+             !Path.IsPathRooted(outputRelative)))
+        {
+            throw new ArgumentException("Output must be outside the source directory.");
+        }
+        // An output path through a linked parent can alias the source tree.
+        // Reject it before hashing so the manifest cannot become part of its own evidence.
+        EvidenceFiles.RejectLinkedAncestors(Path.GetDirectoryName(fullOutput)!);
+        var files = EvidenceFiles.Enumerate(fullInput)
+            .Order(StringComparer.Ordinal)
+            .Select(file =>
             {
-                throw new ArgumentException("--in must be a directory.");
-            }
-            String fullInput = Path.GetFullPath(input);
-            String fullOutput = Path.GetFullPath(output);
-            String outputRelative = Path.GetRelativePath(fullInput, fullOutput);
-            if (outputRelative == "." ||
-                (outputRelative != ".." &&
-                 !outputRelative.StartsWith(".." + Path.DirectorySeparatorChar, PathComparison) &&
-                 !Path.IsPathRooted(outputRelative)))
-            {
-                throw new ArgumentException("Output must be outside the source directory.");
-            }
-            // An output path through a linked parent can alias the source tree.
-            // Reject it before hashing so the manifest cannot become part of its own evidence.
-            EvidenceFiles.RejectLinkedAncestors(Path.GetDirectoryName(fullOutput)!);
-            var files = EvidenceFiles.Enumerate(fullInput)
-                .Order(StringComparer.Ordinal)
-                .Select(file =>
-                {
-                    // Narrow the window for a file being swapped to a link after enumeration.
-                    EvidenceFiles.RejectLinkedAncestors(file);
-                    var snapshot = HashFileAndLength(file);
-                    EvidenceFiles.RejectLinkedAncestors(file);
-                    return new FileRecord(EvidenceFiles.ToManifestPath(fullInput, file),
-                        snapshot.Sha256, snapshot.Bytes);
-                }).ToArray();
-            if (files.Length == 0)
-            {
-                throw new InvalidDataException("Cannot archive an empty evidence directory.");
-            }
+                // Narrow the window for a file being swapped to a link after enumeration.
+                EvidenceFiles.RejectLinkedAncestors(file);
+                var snapshot = HashFileAndLength(file);
+                EvidenceFiles.RejectLinkedAncestors(file);
+                return new FileRecord(EvidenceFiles.ToManifestPath(fullInput, file),
+                    snapshot.Sha256, snapshot.Bytes);
+            }).ToArray();
+        if (files.Length == 0)
+        {
+            throw new InvalidDataException("Cannot archive an empty evidence directory.");
+        }
 
-            // A file added or removed while other evidence was being hashed
-            // must not silently produce a manifest missing part of the submission.
-            // This is a best-effort inventory check, not an atomic snapshot.
-            HashSet<String> archivedPaths = new HashSet<String>(
-                files.Select(entry => entry.Path), StringComparer.Ordinal);
-            String[] finalArchivePaths = EvidenceFiles.Enumerate(fullInput)
-                .Select(file => EvidenceFiles.ToManifestPath(fullInput, file)).ToArray();
-            if (!archivedPaths.SetEquals(finalArchivePaths))
-            {
-                throw new InvalidDataException("Evidence file list changed during archive creation.");
-            }
+        // A file added or removed while other evidence was being hashed
+        // must not silently produce a manifest missing part of the submission.
+        // This is a best-effort inventory check, not an atomic snapshot.
+        HashSet<String> archivedPaths = new HashSet<String>(
+            files.Select(entry => entry.Path), StringComparer.Ordinal);
+        String[] finalArchivePaths = EvidenceFiles.Enumerate(fullInput)
+            .Select(file => EvidenceFiles.ToManifestPath(fullInput, file)).ToArray();
+        if (!archivedPaths.SetEquals(finalArchivePaths))
+        {
+            throw new InvalidDataException("Evidence file list changed during archive creation.");
+        }
 
-            var record = new Manifest(1, id, DateTimeOffset.UtcNow, files);
-            Directory.CreateDirectory(Path.GetDirectoryName(fullOutput)!);
-            // Recheck after creating parents: a linked directory could otherwise
-            // redirect the manifest into the evidence tree during hashing.
-            EvidenceFiles.RejectLinkedAncestors(Path.GetDirectoryName(fullOutput)!);
-            // Write a complete temporary manifest before publishing it. A failed
-            // serialization must not leave a partial file at the requested path.
-            String manifestDigest = WriteNewFileAtomically(fullOutput, stream =>
-            {
-                JsonSerializer.Serialize(stream, record, new JsonSerializerOptions { WriteIndented = true });
-            }, MaxManifestBytes);
-            Console.WriteLine($"Archived {files.Length} file hashes: {JsonSerializer.Serialize(output)}");
-            Console.WriteLine($"Manifest SHA-256: {manifestDigest}");
-            Console.WriteLine("Preserve the manifest digest independently with the original files, email headers, and a trustworthy external timestamp.");
-            return 0;
+        var record = new Manifest(1, id, DateTimeOffset.UtcNow, files);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullOutput)!);
+        // Recheck after creating parents: a linked directory could otherwise
+        // redirect the manifest into the evidence tree during hashing.
+        EvidenceFiles.RejectLinkedAncestors(Path.GetDirectoryName(fullOutput)!);
+        // Write a complete temporary manifest before publishing it. A failed
+        // serialization must not leave a partial file at the requested path.
+        String manifestDigest = WriteNewFileAtomically(fullOutput, stream =>
+        {
+            JsonSerializer.Serialize(stream, record, new JsonSerializerOptions { WriteIndented = true });
+        }, MaxManifestBytes);
+        Console.WriteLine($"Archived {files.Length} file hashes: {JsonSerializer.Serialize(output)}");
+        Console.WriteLine($"Manifest SHA-256: {manifestDigest}");
+        Console.WriteLine("Preserve the manifest digest independently with the original files, email headers, and a trustworthy external timestamp.");
+        return 0;
     }
 
     private static Int32 CheckArchive(Dictionary<String, String> options)
     {
-            String input = Required(options, "in");
-            String manifestFile = Required(options, "manifest");
-            if (!Directory.Exists(input))
+        String input = Required(options, "in");
+        String manifestFile = Required(options, "manifest");
+        if (!Directory.Exists(input))
+        {
+            throw new ArgumentException("--in must be an existing directory.");
+        }
+
+        // Reject a linked evidence root before any manifest entry can be reported as OK.
+        EvidenceFiles.RejectLinkedAncestors(input);
+        // Reject malformed digest arguments before opening an untrusted manifest.
+        if (options.TryGetValue("sha256", out String? expectedDigest) &&
+            (expectedDigest.Length != 64 || !expectedDigest.All(Uri.IsHexDigit)))
+        {
+            throw new ArgumentException("--sha256 must be exactly 64 hexadecimal characters.");
+        }
+
+        // Manifest input must not be redirected through a symbolic link or junction.
+        EvidenceFiles.RejectLinkedAncestors(manifestFile);
+        // Hash and parse the same manifest bytes, so the supplied digest
+        // cannot be checked against a different file read.
+        Byte[] manifestBytes = ReadManifestBytes(manifestFile);
+        if (expectedDigest is not null)
+        {
+            String actualDigest = Convert.ToHexString(SHA256.HashData(manifestBytes));
+            if (!actualDigest.Equals(expectedDigest, StringComparison.OrdinalIgnoreCase))
             {
-                throw new ArgumentException("--in must be an existing directory.");
+                throw new InvalidDataException("Manifest SHA-256 does not match the supplied digest.");
+            }
+        }
+
+        using JsonDocument document = JsonDocument.Parse(manifestBytes);
+        RejectDuplicateJsonProperties(document.RootElement);
+        var manifest = document.RootElement.Deserialize<Manifest>(
+            new JsonSerializerOptions { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
+            ?? throw new InvalidDataException("Invalid manifest.");
+        if (manifest.SchemaVersion != 1 || manifest.Files is null ||
+            manifest.Files.Length == 0 || String.IsNullOrWhiteSpace(manifest.SubmissionId) ||
+            manifest.RecordedUtc == default || manifest.RecordedUtc.Offset != TimeSpan.Zero)
+        {
+            throw new InvalidDataException("Unsupported or invalid manifest.");
+        }
+
+        String root = Path.GetFullPath(input);
+        StringComparer pathComparer = OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        // Reject case-only duplicates even on case-sensitive Unix hosts.
+        HashSet<String> expected = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        List<(String File, String Relative, FileRecord Record)> validated = new();
+
+        // Validate the entire manifest before printing any OK results.
+        // A malformed or duplicate entry must not yield partial verification output.
+        foreach (FileRecord entry in manifest.Files)
+        {
+            if (entry is null || entry.Bytes < 0 ||
+                String.IsNullOrEmpty(entry.Sha256) ||
+                entry.Sha256.Length != 64 || !entry.Sha256.All(Uri.IsHexDigit))
+            {
+                throw new InvalidDataException("Manifest contains invalid file metadata.");
             }
 
-            // Reject a linked evidence root before any manifest entry can be reported as OK.
-            EvidenceFiles.RejectLinkedAncestors(input);
-            // Reject malformed digest arguments before opening an untrusted manifest.
-            if (options.TryGetValue("sha256", out String? expectedDigest) &&
-                (expectedDigest.Length != 64 || !expectedDigest.All(Uri.IsHexDigit)))
+            String file = EvidenceFiles.Resolve(root, entry.Path);
+            String relative = EvidenceFiles.ToManifestPath(root, file);
+            if (!expected.Add(relative))
             {
-                throw new ArgumentException("--sha256 must be exactly 64 hexadecimal characters.");
+                throw new InvalidDataException("Manifest contains duplicate file paths.");
             }
 
-            // Manifest input must not be redirected through a symbolic link or junction.
-            EvidenceFiles.RejectLinkedAncestors(manifestFile);
-            // Hash and parse the same manifest bytes, so the supplied digest
-            // cannot be checked against a different file read.
-            Byte[] manifestBytes = ReadManifestBytes(manifestFile);
-            if (expectedDigest is not null)
+            validated.Add((file, relative, entry));
+        }
+
+        // A manifest must not describe two differently cased directory names
+        // or treat the same path as both a file and a directory.
+        ValidatePortableManifestTree(validated.Select(item => item.Relative));
+
+        // Validate the complete filesystem snapshot, including extra names and
+        // links, before printing any successful verification records.
+        String[] actualPaths = EvidenceFiles.Enumerate(root)
+            .Select(file => EvidenceFiles.ToManifestPath(root, file)).ToArray();
+
+        // Finish every hash check before printing successful records.
+        // If a later file throws an I/O or link-validation error, no
+        // earlier OK line should be mistaken for a completed verification.
+        List<(String Relative, Boolean Matches)> results = new();
+        foreach (var item in validated)
+        {
+            Boolean matches = false;
+            if (File.Exists(item.File))
             {
-                String actualDigest = Convert.ToHexString(SHA256.HashData(manifestBytes));
-                if (!actualDigest.Equals(expectedDigest, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidDataException("Manifest SHA-256 does not match the supplied digest.");
-                }
+                EvidenceFiles.RejectLinkedAncestors(item.File);
+                var snapshot = HashFileAndLength(item.File);
+                EvidenceFiles.RejectLinkedAncestors(item.File);
+                matches = snapshot.Bytes == item.Record.Bytes &&
+                    snapshot.Sha256.Equals(item.Record.Sha256, StringComparison.OrdinalIgnoreCase);
             }
 
-            using JsonDocument document = JsonDocument.Parse(manifestBytes);
-            RejectDuplicateJsonProperties(document.RootElement);
-            var manifest = document.RootElement.Deserialize<Manifest>(
-                new JsonSerializerOptions { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
-                ?? throw new InvalidDataException("Invalid manifest.");
-            if (manifest.SchemaVersion != 1 || manifest.Files is null ||
-                manifest.Files.Length == 0 || String.IsNullOrWhiteSpace(manifest.SubmissionId) ||
-                manifest.RecordedUtc == default || manifest.RecordedUtc.Offset != TimeSpan.Zero)
-            {
-                throw new InvalidDataException("Unsupported or invalid manifest.");
-            }
+            results.Add((item.Relative, matches));
+        }
 
-            String root = Path.GetFullPath(input);
-            StringComparer pathComparer = OperatingSystem.IsWindows()
-                ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-            // Reject case-only duplicates even on case-sensitive Unix hosts.
-            HashSet<String> expected = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
-            List<(String File, String Relative, FileRecord Record)> validated = new();
+        // Re-enumerate after hashing. An addition, removal or link swap
+        // during a long check must not yield an apparently complete report.
+        // This remains a best-effort check, not an atomic snapshot.
+        HashSet<String> initialPaths = new HashSet<String>(actualPaths, pathComparer);
+        HashSet<String> finalPaths = new HashSet<String>(
+            EvidenceFiles.Enumerate(root)
+                .Select(file => EvidenceFiles.ToManifestPath(root, file)), pathComparer);
+        if (!initialPaths.SetEquals(finalPaths))
+        {
+            throw new InvalidDataException("Evidence file list changed during verification.");
+        }
 
-            // Validate the entire manifest before printing any OK results.
-            // A malformed or duplicate entry must not yield partial verification output.
-            foreach (FileRecord entry in manifest.Files)
-            {
-                if (entry is null || entry.Bytes < 0 ||
-                    String.IsNullOrEmpty(entry.Sha256) ||
-                    entry.Sha256.Length != 64 || !entry.Sha256.All(Uri.IsHexDigit))
-                {
-                    throw new InvalidDataException("Manifest contains invalid file metadata.");
-                }
-
-                String file = EvidenceFiles.Resolve(root, entry.Path);
-                String relative = EvidenceFiles.ToManifestPath(root, file);
-                if (!expected.Add(relative))
-                {
-                    throw new InvalidDataException("Manifest contains duplicate file paths.");
-                }
-
-                validated.Add((file, relative, entry));
-            }
-
-            // A manifest must not describe two differently cased directory names
-            // or treat the same path as both a file and a directory.
-            ValidatePortableManifestTree(validated.Select(item => item.Relative));
-
-            // Validate the complete filesystem snapshot, including extra names and
-            // links, before printing any successful verification records.
-            String[] actualPaths = EvidenceFiles.Enumerate(root)
-                .Select(file => EvidenceFiles.ToManifestPath(root, file)).ToArray();
-
-            // Finish every hash check before printing successful records.
-            // If a later file throws an I/O or link-validation error, no
-            // earlier OK line should be mistaken for a completed verification.
-            List<(String Relative, Boolean Matches)> results = new();
-            foreach (var item in validated)
-            {
-                Boolean matches = false;
-                if (File.Exists(item.File))
-                {
-                    EvidenceFiles.RejectLinkedAncestors(item.File);
-                    var snapshot = HashFileAndLength(item.File);
-                    EvidenceFiles.RejectLinkedAncestors(item.File);
-                    matches = snapshot.Bytes == item.Record.Bytes &&
-                        snapshot.Sha256.Equals(item.Record.Sha256, StringComparison.OrdinalIgnoreCase);
-                }
-
-                results.Add((item.Relative, matches));
-            }
-
-            // Re-enumerate after hashing. An addition, removal or link swap
-            // during a long check must not yield an apparently complete report.
-            // This remains a best-effort check, not an atomic snapshot.
-            HashSet<String> initialPaths = new HashSet<String>(actualPaths, pathComparer);
-            HashSet<String> finalPaths = new HashSet<String>(
-                EvidenceFiles.Enumerate(root)
-                    .Select(file => EvidenceFiles.ToManifestPath(root, file)), pathComparer);
-            if (!initialPaths.SetEquals(finalPaths))
-            {
-                throw new InvalidDataException("Evidence file list changed during verification.");
-            }
-
-            return ReportArchiveResults(results, actualPaths, expected, manifest.Files.Length);
+        return ReportArchiveResults(results, actualPaths, expected, manifest.Files.Length);
     }
 
     private static Int32 VerifyImage(Dictionary<String, String> options)
