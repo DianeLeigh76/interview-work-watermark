@@ -128,6 +128,18 @@ internal static class Program
         return 0;
     }
 
+    private static void RequireOutputOutsideSource(String fullInput, String fullOutput)
+    {
+        String outputRelative = Path.GetRelativePath(fullInput, fullOutput);
+        if (outputRelative == "." ||
+            (outputRelative != ".." &&
+             !outputRelative.StartsWith(".." + Path.DirectorySeparatorChar, PathComparison) &&
+             !Path.IsPathRooted(outputRelative)))
+        {
+            throw new ArgumentException("Output must be outside the source directory.");
+        }
+    }
+
     private static Int32 CreateArchive(Dictionary<String, String> options)
     {
         String input = Required(options, "in");
@@ -139,14 +151,7 @@ internal static class Program
         }
         String fullInput = Path.GetFullPath(input);
         String fullOutput = Path.GetFullPath(output);
-        String outputRelative = Path.GetRelativePath(fullInput, fullOutput);
-        if (outputRelative == "." ||
-            (outputRelative != ".." &&
-             !outputRelative.StartsWith(".." + Path.DirectorySeparatorChar, PathComparison) &&
-             !Path.IsPathRooted(outputRelative)))
-        {
-            throw new ArgumentException("Output must be outside the source directory.");
-        }
+        RequireOutputOutsideSource(fullInput, fullOutput);
         // An output path through a linked parent can alias the source tree.
         // Reject it before hashing so the manifest cannot become part of its own evidence.
         EvidenceFiles.RejectLinkedAncestors(Path.GetDirectoryName(fullOutput)!);
