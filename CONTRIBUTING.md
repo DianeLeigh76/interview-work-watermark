@@ -44,3 +44,17 @@ Existing files predate these rules; refactor to this layout incrementally, keepi
 - Prefer descriptive methods that encapsulate one responsibility over deeply nested `switch`, `foreach`, `if` and `try` blocks.
 - Do not mechanically extract tiny blocks if doing so obscures behavior or increases complexity.
 - The interactive menu is the default for no-argument launches from both Visual Studio and a normal terminal; explicit CLI arguments must continue to work for automation.
+
+## Owner preference: shallow, readable control flow
+
+These are review requirements for all contributors, including AI-generated changes:
+
+- Avoid deep indentation as a design rule, not just a formatting preference. Count nested control-flow constructs within a method; namespace, type, and method indentation are excluded.
+- Target zero to three nested control-flow levels. At four or more, refactor using guard clauses, early returns, or focused helper methods unless there is a clear, documented reason not to.
+- Every top-level command `switch` case should delegate to one appropriately named handler method and return its result. Do not implement substantial business logic directly inside a case.
+- Handler methods should delegate validation, processing, and reporting when these responsibilities would otherwise cause large or deeply nested methods.
+- Keep code readable and debuggable. Do not introduce unnecessary abstractions merely to satisfy a numeric indentation limit.
+- The same interactive, plain-language menu must appear for no-argument launches in Visual Studio and when running the executable directly from a terminal. CLI argument mode must remain supported for scripts.
+- When modifying command dispatch or menu code, review both launch paths and report whether they were actually tested.
+
+The owner locally confirmed that the solution built, tests passed, and both launch modes appeared to work after the command-dispatch refactor. This is a historical validation report, not proof that later revisions pass.
