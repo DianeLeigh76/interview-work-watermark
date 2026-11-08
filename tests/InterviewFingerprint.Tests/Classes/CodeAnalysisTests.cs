@@ -654,4 +654,17 @@ public sealed class CodeAnalysisTests
 
         Assert.Throws<InvalidDataException>(() => CodeAnalysis.Fingerprint(path));
     }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Utf32SourceContainingNullCharacterIsRejected(Boolean bigEndian)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String path = Path.Combine(directory.Root, "nul-utf32.cs");
+        File.WriteAllText(path, "class Example { }\0",
+            new UTF32Encoding(bigEndian: bigEndian, byteOrderMark: true, throwOnInvalidCharacters: true));
+
+        Assert.Throws<InvalidDataException>(() => CodeAnalysis.Fingerprint(path));
+    }
+
 }
