@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "Fingerprint Program.cs": {
+      "commandName": "Project",
+      "commandLineArgs": "code-fingerprint --in Program.cs",
+      "workingDirectory": "$(MSBuildProjectDirectory)"
+    },
+    "Compare Program.cs with itself": {
+      "commandName": "Project",
+      "commandLineArgs": "compare-code --a Program.cs --b Program.cs",
+      "workingDirectory": "$(MSBuildProjectDirectory)"
+    }
+  }
+}
