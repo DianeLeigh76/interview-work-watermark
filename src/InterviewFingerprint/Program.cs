@@ -205,6 +205,20 @@ internal static class Program
         return 0;
     }
 
+    private static void ValidateManifestDigest(Byte[] manifestBytes, String? expectedDigest)
+    {
+        if (expectedDigest is null)
+        {
+            return;
+        }
+
+        String actualDigest = Convert.ToHexString(SHA256.HashData(manifestBytes));
+        if (!actualDigest.Equals(expectedDigest, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("Manifest SHA-256 does not match the supplied digest.");
+        }
+    }
+
     private static Int32 CheckArchive(Dictionary<String, String> options)
     {
         String input = Required(options, "in");
@@ -228,14 +242,7 @@ internal static class Program
         // Hash and parse the same manifest bytes, so the supplied digest
         // cannot be checked against a different file read.
         Byte[] manifestBytes = ReadManifestBytes(manifestFile);
-        if (expectedDigest is not null)
-        {
-            String actualDigest = Convert.ToHexString(SHA256.HashData(manifestBytes));
-            if (!actualDigest.Equals(expectedDigest, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidDataException("Manifest SHA-256 does not match the supplied digest.");
-            }
-        }
+        ValidateManifestDigest(manifestBytes, expectedDigest);
 
         using JsonDocument document = JsonDocument.Parse(manifestBytes);
         RejectDuplicateJsonProperties(document.RootElement);
