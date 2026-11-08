@@ -20,8 +20,13 @@ internal static class Program
         {
             if (arguments.Length == 0)
             {
-                Usage();
-                return 2;
+                if (Console.IsInputRedirected)
+                {
+                    Usage();
+                    return 2;
+                }
+
+                return InteractiveMenu.Run(Main);
             }
             String command = arguments[0].ToLowerInvariant();
             var options = Parse(arguments.Skip(1).ToArray());
