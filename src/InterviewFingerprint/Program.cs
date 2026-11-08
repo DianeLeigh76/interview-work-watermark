@@ -317,33 +317,7 @@ internal static class Program
                         throw new InvalidDataException("Evidence file list changed during verification.");
                     }
 
-                    Int32 matched = 0;
-                    Int32 errors = 0;
-                    foreach (var result in results)
-                    {
-                        Console.WriteLine($"{(result.Matches ? "OK" : "CHANGED/MISSING")} {JsonSerializer.Serialize(result.Relative)}");
-                        if (result.Matches)
-                        {
-                            matched++;
-                        }
-                        else
-                        {
-                            errors++;
-                        }
-                    }
-
-                    Int32 extras = 0;
-                    foreach (String relative in actualPaths)
-                    {
-                        if (!expected.Contains(relative))
-                        {
-                            Console.WriteLine($"EXTRA {JsonSerializer.Serialize(relative)}");
-                            extras++;
-                        }
-                    }
-
-                    Console.WriteLine($"{matched}/{manifest.Files.Length} match; {extras} unrecorded files");
-                    return errors == 0 && extras == 0 ? 0 : 1;
+                    return ReportArchiveResults(results, actualPaths, expected, manifest.Files.Length);
                 }
                 default:
                 {
@@ -357,6 +331,41 @@ internal static class Program
             Console.Error.WriteLine($"Error: {JsonSerializer.Serialize(problem.Message)}");
             return 2;
         }
+    }
+
+    private static Int32 ReportArchiveResults(
+        List<(String Relative, Boolean Matches)> results,
+        String[] actualPaths,
+        HashSet<String> expected,
+        Int32 recordedFileCount)
+    {
+        Int32 matched = 0;
+        Int32 errors = 0;
+        foreach (var result in results)
+        {
+            Console.WriteLine($"{(result.Matches ? "OK" : "CHANGED/MISSING")} {JsonSerializer.Serialize(result.Relative)}");
+            if (result.Matches)
+            {
+                matched++;
+            }
+            else
+            {
+                errors++;
+            }
+        }
+
+        Int32 extras = 0;
+        foreach (String relative in actualPaths)
+        {
+            if (!expected.Contains(relative))
+            {
+                Console.WriteLine($"EXTRA {JsonSerializer.Serialize(relative)}");
+                extras++;
+            }
+        }
+
+        Console.WriteLine($"{matched}/{recordedFileCount} match; {extras} unrecorded files");
+        return errors == 0 && extras == 0 ? 0 : 1;
     }
 
     private static void ValidatePortableManifestTree(IEnumerable<String> paths)
