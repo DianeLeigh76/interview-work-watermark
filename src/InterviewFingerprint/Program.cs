@@ -277,21 +277,7 @@ internal static class Program
         // Finish every hash check before printing successful records.
         // If a later file throws an I/O or link-validation error, no
         // earlier OK line should be mistaken for a completed verification.
-        List<(String Relative, Boolean Matches)> results = new();
-        foreach (var item in validated)
-        {
-            Boolean matches = false;
-            if (File.Exists(item.File))
-            {
-                EvidenceFiles.RejectLinkedAncestors(item.File);
-                var snapshot = HashFileAndLength(item.File);
-                EvidenceFiles.RejectLinkedAncestors(item.File);
-                matches = snapshot.Bytes == item.Record.Bytes &&
-                    snapshot.Sha256.Equals(item.Record.Sha256, StringComparison.OrdinalIgnoreCase);
-            }
-
-            results.Add((item.Relative, matches));
-        }
+        List<(String Relative, Boolean Matches)> results = CheckRecordedFiles(validated);
 
         // Re-enumerate after hashing. An addition, removal or link swap
         // during a long check must not yield an apparently complete report.
@@ -333,6 +319,28 @@ internal static class Program
 
             validated.Add((file, relative, entry));
         }
+    }
+
+    private static List<(String Relative, Boolean Matches)> CheckRecordedFiles(
+        List<(String File, String Relative, FileRecord Record)> validated)
+    {
+        List<(String Relative, Boolean Matches)> results = new();
+        foreach (var item in validated)
+        {
+            Boolean matches = false;
+            if (File.Exists(item.File))
+            {
+                EvidenceFiles.RejectLinkedAncestors(item.File);
+                var snapshot = HashFileAndLength(item.File);
+                EvidenceFiles.RejectLinkedAncestors(item.File);
+                matches = snapshot.Bytes == item.Record.Bytes &&
+                    snapshot.Sha256.Equals(item.Record.Sha256, StringComparison.OrdinalIgnoreCase);
+            }
+
+            results.Add((item.Relative, matches));
+        }
+
+        return results;
     }
 
     private static Int32 VerifyImage(Dictionary<String, String> options)
