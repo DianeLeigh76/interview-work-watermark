@@ -667,4 +667,14 @@ public sealed class CodeAnalysisTests
         Assert.Throws<InvalidDataException>(() => CodeAnalysis.Fingerprint(path));
     }
 
+    [Fact]
+    public void MalformedBomMarkedUtf8IsRejected()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String path = Path.Combine(directory.Root, "invalid-bom-utf8.cs");
+        File.WriteAllBytes(path, new Byte[] { 0xEF, 0xBB, 0xBF, 0xC3, 0x28 });
+
+        Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Fingerprint(path));
+    }
+
 }
