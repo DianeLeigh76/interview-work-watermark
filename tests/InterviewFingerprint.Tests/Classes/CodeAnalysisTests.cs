@@ -677,4 +677,22 @@ public sealed class CodeAnalysisTests
         Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Fingerprint(path));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void MalformedUtf16ComparisonInputThrowsInEitherPosition(Boolean bigEndian)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String validPath = Path.Combine(directory.Root, "valid.cs");
+        String invalidPath = Path.Combine(directory.Root, "invalid-utf16.cs");
+        File.WriteAllText(validPath, "class Example { Int32 Count = 3; }");
+        Byte[] malformed = bigEndian
+            ? new Byte[] { 0xFE, 0xFF, 0xD8, 0x00 }
+            : new Byte[] { 0xFF, 0xFE, 0x00, 0xD8 };
+        File.WriteAllBytes(invalidPath, malformed);
+
+        Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Compare(validPath, invalidPath));
+        Assert.Throws<DecoderFallbackException>(() => CodeAnalysis.Compare(invalidPath, validPath));
+    }
+
 }
