@@ -65,55 +65,7 @@ internal static class Program
                 }
                 case "verify":
                 {
-                    using SKBitmap image = SKBitmap.Decode(Required(options, "in")) ?? throw new InvalidDataException("Unable to decode suspected image.");
-                    Byte[] payload = Watermark.Payload(Secret(), Required(options, "id"));
-                    if (options.TryGetValue("reference", out String? reference))
-                    {
-                        using SKBitmap referenceImage = SKBitmap.Decode(reference)
-                            ?? throw new InvalidDataException("Unable to decode reference image.");
-                        var referenceResult = Watermark.Verify(referenceImage, payload);
-                        if (!Watermark.IsVerified(referenceResult))
-                        {
-                            Console.WriteLine("Reference image does not verify with this key and submission ID.");
-                            return ReportVerification(referenceResult);
-                        }
-
-                        if (image.Width != referenceImage.Width || image.Height != referenceImage.Height)
-                        {
-                            if (Watermark.TryVerifyCropped(image, payload, referenceImage,
-                                out var croppedResult, out Int32 offsetX, out Int32 offsetY, out Int32 observedBits))
-                            {
-                                Console.WriteLine($"Found candidate crop offset ({offsetX}, {offsetY}); " +
-                                    "this does not uniquely establish the crop position.");
-                                return ReportVerification(croppedResult, observedBits);
-                            }
-
-                            if ((Int64)image.Width * referenceImage.Height !=
-                                (Int64)image.Height * referenceImage.Width)
-                            {
-                                if (image.Width <= referenceImage.Width &&
-                                    image.Height <= referenceImage.Height &&
-                                    referenceImage.Width - image.Width <= 64 &&
-                                    referenceImage.Height - image.Height <= 64)
-                                {
-                                    Console.WriteLine("No candidate crop offset met verification thresholds.");
-                                    return ReportVerification(croppedResult,
-                                        observedBits == 0 ? PayloadBits : observedBits);
-                                }
-
-                                throw new ArgumentException(
-                                    "Aspect ratio differs and the image is outside supported crop limits.");
-                            }
-
-                            using SKBitmap resized = image.Resize(
-                                new SKImageInfo(referenceImage.Width, referenceImage.Height),
-                                SKSamplingOptions.Default)
-                                ?? throw new InvalidOperationException("Unable to resize image.");
-                            return ReportVerification(Watermark.Verify(resized, payload));
-                        }
-                    }
-
-                    return ReportVerification(Watermark.Verify(image, payload));
+                    return VerifyImage(options);
                 }
                 case "code-fingerprint":
                 {
@@ -331,6 +283,80 @@ internal static class Program
             Console.Error.WriteLine($"Error: {JsonSerializer.Serialize(problem.Message)}");
             return 2;
         }
+    }
+
+    private static Int32 VerifyImage(Dictionary<String, String> options)
+    {
+        using SKBitmap image = SKBitmap.Decode(Required(options, "in"))
+            ?? throw new InvalidDataException("Unable to decode suspected image.");
+        Byte[] payload = Watermark.Payload(Secret(), Required(options, "id"));
+
+        if (!options.TryGetValue("reference", out String? reference))
+        {
+            return ReportVerification(Watermark.Verify(image, payload));
+        }
+
+        using SKBitmap referenceImage = SKBitmap.Decode(reference)
+            ?? throw new InvalidDataException("Unable to decode reference image.");
+        return VerifyWithReference(image, referenceImage, payload);
+    }
+
+    private static Int32 VerifyWithReference(SKBitmap image, SKBitmap referenceImage, Byte[] payload)
+    {
+        var referenceResult = Watermark.Verify(referenceImage, payload);
+        if (!Watermark.IsVerified(referenceResult))
+        {
+            Console.WriteLine("Reference image does not verify with this key and submission ID.");
+            return ReportVerification(referenceResult);
+        }
+
+        if (image.Width == referenceImage.Width && image.Height == referenceImage.Height)
+        {
+            return ReportVerification(Watermark.Verify(image, payload));
+        }
+
+        return VerifyDifferentDimensions(image, referenceImage, payload);
+    }
+
+    private static Int32 VerifyDifferentDimensions(SKBitmap image, SKBitmap referenceImage, Byte[] payload)
+    {
+        Boolean cropMatched = Watermark.TryVerifyCropped(image, payload, referenceImage,
+            out var croppedResult, out Int32 offsetX, out Int32 offsetY, out Int32 observedBits);
+        if (cropMatched)
+        {
+            Console.WriteLine($"Found candidate crop offset ({offsetX}, {offsetY}); " +
+                "this does not uniquely establish the crop position.");
+            return ReportVerification(croppedResult, observedBits);
+        }
+
+        Boolean sameAspectRatio = (Int64)image.Width * referenceImage.Height ==
+            (Int64)image.Height * referenceImage.Width;
+        if (sameAspectRatio)
+        {
+            return VerifyResizedImage(image, referenceImage, payload);
+        }
+
+        Boolean withinCropLimits = image.Width <= referenceImage.Width &&
+            image.Height <= referenceImage.Height &&
+            referenceImage.Width - image.Width <= 64 &&
+            referenceImage.Height - image.Height <= 64;
+        if (!withinCropLimits)
+        {
+            throw new ArgumentException(
+                "Aspect ratio differs and the image is outside supported crop limits.");
+        }
+
+        Console.WriteLine("No candidate crop offset met verification thresholds.");
+        return ReportVerification(croppedResult, observedBits == 0 ? PayloadBits : observedBits);
+    }
+
+    private static Int32 VerifyResizedImage(SKBitmap image, SKBitmap referenceImage, Byte[] payload)
+    {
+        using SKBitmap resized = image.Resize(
+            new SKImageInfo(referenceImage.Width, referenceImage.Height),
+            SKSamplingOptions.Default)
+            ?? throw new InvalidOperationException("Unable to resize image.");
+        return ReportVerification(Watermark.Verify(resized, payload));
     }
 
     private static Int32 ReportArchiveResults(
