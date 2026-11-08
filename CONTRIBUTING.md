@@ -35,3 +35,12 @@ Existing files predate these rules; refactor to this layout incrementally, keepi
 - Always use braces for `if`, `else`, `for`, `foreach`, `while`, and similar control-flow bodies, including single-statement bodies.
 - Do not use inline single-line blocks such as `if (condition) { DoWork(); }`.
 - Enforce these rules in code reviews and apply them while refactoring existing source.
+
+## Method size and nesting
+
+- Aim for no more than three levels of control-flow nesting inside a method; at four levels, consider extracting a named helper or using guard clauses.
+- Namespace, type and method declaration indentation does not count toward this control-flow guideline.
+- Keep command dispatch separate from command implementation, validation and result reporting.
+- Prefer descriptive methods that encapsulate one responsibility over deeply nested `switch`, `foreach`, `if` and `try` blocks.
+- Do not mechanically extract tiny blocks if doing so obscures behavior or increases complexity.
+- The interactive menu is the default for no-argument launches from both Visual Studio and a normal terminal; explicit CLI arguments must continue to work for automation.
