@@ -314,27 +314,25 @@ internal static class Program
         HashSet<String> expected,
         List<(String File, String Relative, FileRecord Record)> validated)
     {
-            // Validate the entire manifest before printing any OK results.
-            // A malformed or duplicate entry must not yield partial verification output.
-            foreach (FileRecord entry in manifest.Files)
+        // Validate all entries before reporting any successful matches.
+        foreach (FileRecord entry in entries)
+        {
+            if (entry is null || entry.Bytes < 0 ||
+                String.IsNullOrEmpty(entry.Sha256) ||
+                entry.Sha256.Length != 64 || !entry.Sha256.All(Uri.IsHexDigit))
             {
-                if (entry is null || entry.Bytes < 0 ||
-                    String.IsNullOrEmpty(entry.Sha256) ||
-                    entry.Sha256.Length != 64 || !entry.Sha256.All(Uri.IsHexDigit))
-                {
-                    throw new InvalidDataException("Manifest contains invalid file metadata.");
-                }
-
-                String file = EvidenceFiles.Resolve(root, entry.Path);
-                String relative = EvidenceFiles.ToManifestPath(root, file);
-                if (!expected.Add(relative))
-                {
-                    throw new InvalidDataException("Manifest contains duplicate file paths.");
-                }
-
-                validated.Add((file, relative, entry));
+                throw new InvalidDataException("Manifest contains invalid file metadata.");
             }
 
+            String file = EvidenceFiles.Resolve(root, entry.Path);
+            String relative = EvidenceFiles.ToManifestPath(root, file);
+            if (!expected.Add(relative))
+            {
+                throw new InvalidDataException("Manifest contains duplicate file paths.");
+            }
+
+            validated.Add((file, relative, entry));
+        }
     }
 
     private static Int32 VerifyImage(Dictionary<String, String> options)
