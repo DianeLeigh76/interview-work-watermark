@@ -140,6 +140,18 @@ internal static class Program
         }
     }
 
+    private static void ValidateArchiveInventory(String fullInput, FileRecord[] files)
+    {
+        HashSet<String> archivedPaths = new HashSet<String>(
+            files.Select(entry => entry.Path), StringComparer.Ordinal);
+        String[] finalArchivePaths = EvidenceFiles.Enumerate(fullInput)
+            .Select(file => EvidenceFiles.ToManifestPath(fullInput, file)).ToArray();
+        if (!archivedPaths.SetEquals(finalArchivePaths))
+        {
+            throw new InvalidDataException("Evidence file list changed during archive creation.");
+        }
+    }
+
     private static Int32 CreateArchive(Dictionary<String, String> options)
     {
         String input = Required(options, "in");
@@ -174,14 +186,7 @@ internal static class Program
         // A file added or removed while other evidence was being hashed
         // must not silently produce a manifest missing part of the submission.
         // This is a best-effort inventory check, not an atomic snapshot.
-        HashSet<String> archivedPaths = new HashSet<String>(
-            files.Select(entry => entry.Path), StringComparer.Ordinal);
-        String[] finalArchivePaths = EvidenceFiles.Enumerate(fullInput)
-            .Select(file => EvidenceFiles.ToManifestPath(fullInput, file)).ToArray();
-        if (!archivedPaths.SetEquals(finalArchivePaths))
-        {
-            throw new InvalidDataException("Evidence file list changed during archive creation.");
-        }
+        ValidateArchiveInventory(fullInput, files);
 
         var record = new Manifest(1, id, DateTimeOffset.UtcNow, files);
         Directory.CreateDirectory(Path.GetDirectoryName(fullOutput)!);
