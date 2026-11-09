@@ -8,7 +8,7 @@ internal static class InteractiveMenu
         {
             ShowMainMenu();
             String? selection = Console.ReadLine();
-            if (selection is null || selection.Trim() == "0")
+            if (selection is null || selection.Trim() is "0" or "Q" or "q")
             {
                 return 0;
             }
@@ -78,7 +78,7 @@ internal static class InteractiveMenu
         Console.WriteLine("6. Check whether recorded files have changed");
         Console.WriteLine();
         Console.WriteLine("0. Exit");
-        Console.Write("Enter a number (0-6): ");
+        Console.Write("Enter a number (0-6), or Q to exit: ");
     }
 
     private static void ShowOperationResult(Int32 result)
