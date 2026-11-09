@@ -48,12 +48,7 @@ internal static class InteractiveMenu
 
             Console.WriteLine();
             Int32 result = execute(arguments);
-            Console.WriteLine();
-            Console.WriteLine(result == 0
-                ? "Operation completed. Review the details above."
-                : result == 1
-                    ? "The check did not confirm a match, or found changes. Review the details above."
-                    : "The operation could not be completed. Review the error above.");
+            ShowOperationResult(result);
             Console.WriteLine("Press Enter to return to the menu.");
             if (Console.ReadLine() is null)
             {
@@ -79,6 +74,18 @@ internal static class InteractiveMenu
         Console.WriteLine();
         Console.WriteLine("0. Exit");
         Console.Write("Enter a number (0-6): ");
+    }
+
+    private static void ShowOperationResult(Int32 result)
+    {
+        Console.WriteLine();
+        String message = result switch
+        {
+            0 => "Operation completed. Review the details above.",
+            1 => "The check did not confirm a match, or found changes. Review the details above.",
+            _ => "The operation could not be completed. Review the error above."
+        };
+        Console.WriteLine(message);
     }
 
     private static String[]? Collect(
