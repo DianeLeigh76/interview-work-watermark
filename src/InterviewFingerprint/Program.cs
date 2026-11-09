@@ -210,6 +210,21 @@ internal static class Program
         return 0;
     }
 
+    private static String? GetExpectedManifestDigest(Dictionary<String, String> options)
+    {
+        if (!options.TryGetValue("sha256", out String? digest))
+        {
+            return null;
+        }
+
+        if (digest.Length != 64 || !digest.All(Uri.IsHexDigit))
+        {
+            throw new ArgumentException("--sha256 must be exactly 64 hexadecimal characters.");
+        }
+
+        return digest;
+    }
+
     private static void ValidateManifestDigest(Byte[] manifestBytes, String? expectedDigest)
     {
         if (expectedDigest is null)
@@ -236,11 +251,7 @@ internal static class Program
         // Reject a linked evidence root before any manifest entry can be reported as OK.
         EvidenceFiles.RejectLinkedAncestors(input);
         // Reject malformed digest arguments before opening an untrusted manifest.
-        if (options.TryGetValue("sha256", out String? expectedDigest) &&
-            (expectedDigest.Length != 64 || !expectedDigest.All(Uri.IsHexDigit)))
-        {
-            throw new ArgumentException("--sha256 must be exactly 64 hexadecimal characters.");
-        }
+        String? expectedDigest = GetExpectedManifestDigest(options);
 
         // Manifest input must not be redirected through a symbolic link or junction.
         EvidenceFiles.RejectLinkedAncestors(manifestFile);
