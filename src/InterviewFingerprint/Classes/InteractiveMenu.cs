@@ -13,11 +13,17 @@ internal static class InteractiveMenu
                 return 0;
             }
 
+            if (selection.Trim() is not ("1" or "2" or "3" or "4" or "5" or "6"))
+            {
+                Console.WriteLine("That is not a menu choice. Please enter a number from 0 to 6.");
+                continue;
+            }
+
             String[]? arguments = ChooseOperation(selection.Trim());
 
             if (arguments is null)
             {
-                Console.WriteLine("No operation started. Please choose a number from the menu.");
+                Console.WriteLine("Cancelled. No files were changed by this menu selection.");
                 continue;
             }
 
