@@ -254,12 +254,7 @@ internal static class Program
         var manifest = document.RootElement.Deserialize<Manifest>(
             new JsonSerializerOptions { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
             ?? throw new InvalidDataException("Invalid manifest.");
-        if (manifest.SchemaVersion != 1 || manifest.Files is null ||
-            manifest.Files.Length == 0 || String.IsNullOrWhiteSpace(manifest.SubmissionId) ||
-            manifest.RecordedUtc == default || manifest.RecordedUtc.Offset != TimeSpan.Zero)
-        {
-            throw new InvalidDataException("Unsupported or invalid manifest.");
-        }
+        ValidateManifestSchema(manifest);
 
         String root = Path.GetFullPath(input);
         // Reject case-only duplicates even on case-sensitive Unix hosts.
@@ -288,6 +283,16 @@ internal static class Program
         ValidateVerificationInventory(root, actualPaths);
 
         return ReportArchiveResults(results, actualPaths, expected, manifest.Files.Length);
+    }
+
+    private static void ValidateManifestSchema(Manifest manifest)
+    {
+        if (manifest.SchemaVersion != 1 || manifest.Files is null ||
+            manifest.Files.Length == 0 || String.IsNullOrWhiteSpace(manifest.SubmissionId) ||
+            manifest.RecordedUtc == default || manifest.RecordedUtc.Offset != TimeSpan.Zero)
+        {
+            throw new InvalidDataException("Unsupported or invalid manifest.");
+        }
     }
 
     private static void ValidateManifestEntries(
