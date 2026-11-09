@@ -64,21 +64,21 @@ internal static class InteractiveMenu
 
     private static void ShowMainMenu()
     {
-    Console.WriteLine();
-    Console.WriteLine("==============================================");
-    Console.WriteLine("           INTERVIEW FINGERPRINT");
-    Console.WriteLine("==============================================");
-    Console.WriteLine("What would you like to do?");
-    Console.WriteLine();
-    Console.WriteLine("1. Protect an image before sharing it");
-    Console.WriteLine("2. Check whether an image contains your mark");
-    Console.WriteLine("3. Create a record of a C# code file");
-    Console.WriteLine("4. Compare two C# code files");
-    Console.WriteLine("5. Create a record of a folder of files");
-    Console.WriteLine("6. Check whether recorded files have changed");
-    Console.WriteLine();
-    Console.WriteLine("0. Exit");
-    Console.Write("Enter a number (0-6): ");
+        Console.WriteLine();
+        Console.WriteLine("==============================================");
+        Console.WriteLine("           INTERVIEW FINGERPRINT");
+        Console.WriteLine("==============================================");
+        Console.WriteLine("What would you like to do?");
+        Console.WriteLine();
+        Console.WriteLine("1. Protect an image before sharing it");
+        Console.WriteLine("2. Check whether an image contains your mark");
+        Console.WriteLine("3. Create a record of a C# code file");
+        Console.WriteLine("4. Compare two C# code files");
+        Console.WriteLine("5. Create a record of a folder of files");
+        Console.WriteLine("6. Check whether recorded files have changed");
+        Console.WriteLine();
+        Console.WriteLine("0. Exit");
+        Console.Write("Enter a number (0-6): ");
     }
 
     private static String[]? Collect(
