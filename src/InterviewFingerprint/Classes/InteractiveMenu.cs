@@ -13,32 +13,7 @@ internal static class InteractiveMenu
                 return 0;
             }
 
-            String[]? arguments = selection.Trim() switch
-            {
-                "1" => Collect("mark", "Creates a NEW PNG image with a hidden identifying mark. Your original is not replaced.",
-                    [("in", "Full path to the original image (for example C:\\Pictures\\art.png)"),
-                     ("out", "Full path for the NEW marked PNG image"),
-                     ("id", "A label you will remember for this submission (for example Company-2026)")],
-                    [("strength", "Advanced: mark strength from 8 to 60 (press Enter for the default)")]),
-                "2" => Collect("verify", "Checks an image for a mark created with your private secret and submission label. A match is not proof of ownership.",
-                    [("in", "Full path to the image you want to check"),
-                     ("id", "The exact submission label used when marking the image")],
-                    [("reference", "Optional: full path to the originally marked image (helps with some resized or cropped images)")]),
-                "3" => Collect("code-fingerprint", "Displays identifying hashes for a C# code file. This does not change the file or prove authorship.",
-                    [("in", "Full path to the C# code file (for example C:\\Code\\Example.cs)")], []),
-                "4" => Collect("compare-code", "Compares two C# code files. Similarity can occur naturally and is not proof of copying.",
-                    [("a", "Full path to YOUR original C# code file"),
-                     ("b", "Full path to the OTHER C# code file")], []),
-                "5" => Collect("archive", "Creates a NEW JSON record of files in a folder, so changes can be checked later. It does not copy or protect those files.",
-                    [("in", "Full path to the folder containing the files"),
-                     ("out", "Full path for the NEW record file (for example C:\\Records\\submission.json)"),
-                     ("id", "A label for this submission (for example Company-2026)")], []),
-                "6" => Collect("check-archive", "Checks files against a previously saved record. A record alone does not prove when files were created.",
-                    [("in", "Full path to the folder of files you want to check"),
-                     ("manifest", "Full path to the JSON record file created earlier")],
-                    [("sha256", "Optional: the 64-character record checksum you saved separately")]),
-                _ => null
-            };
+            String[]? arguments = ChooseOperation(selection.Trim());
 
             if (arguments is null)
             {
@@ -55,6 +30,36 @@ internal static class InteractiveMenu
                 return result;
             }
         }
+    }
+
+    private static String[]? ChooseOperation(String selection)
+    {
+        return selection.Trim() switch
+        {
+            "1" => Collect("mark", "Creates a NEW PNG image with a hidden identifying mark. Your original is not replaced.",
+                [("in", "Full path to the original image (for example C:\\Pictures\\art.png)"),
+                 ("out", "Full path for the NEW marked PNG image"),
+                 ("id", "A label you will remember for this submission (for example Company-2026)")],
+                [("strength", "Advanced: mark strength from 8 to 60 (press Enter for the default)")]),
+            "2" => Collect("verify", "Checks an image for a mark created with your private secret and submission label. A match is not proof of ownership.",
+                [("in", "Full path to the image you want to check"),
+                 ("id", "The exact submission label used when marking the image")],
+                [("reference", "Optional: full path to the originally marked image (helps with some resized or cropped images)")]),
+            "3" => Collect("code-fingerprint", "Displays identifying hashes for a C# code file. This does not change the file or prove authorship.",
+                [("in", "Full path to the C# code file (for example C:\\Code\\Example.cs)")], []),
+            "4" => Collect("compare-code", "Compares two C# code files. Similarity can occur naturally and is not proof of copying.",
+                [("a", "Full path to YOUR original C# code file"),
+                 ("b", "Full path to the OTHER C# code file")], []),
+            "5" => Collect("archive", "Creates a NEW JSON record of files in a folder, so changes can be checked later. It does not copy or protect those files.",
+                [("in", "Full path to the folder containing the files"),
+                 ("out", "Full path for the NEW record file (for example C:\\Records\\submission.json)"),
+                 ("id", "A label for this submission (for example Company-2026)")], []),
+            "6" => Collect("check-archive", "Checks files against a previously saved record. A record alone does not prove when files were created.",
+                [("in", "Full path to the folder of files you want to check"),
+                 ("manifest", "Full path to the JSON record file created earlier")],
+                [("sha256", "Optional: the 64-character record checksum you saved separately")]),
+            _ => null
+        };
     }
 
     private static void ShowMainMenu()
