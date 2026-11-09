@@ -42,7 +42,7 @@ internal static class InteractiveMenu
     {
         return selection.Trim() switch
         {
-            "1" => Collect("mark", "Creates a NEW PNG image with a hidden identifying mark. Your original is not replaced.",
+            "1" => Collect("mark", "Creates a NEW PNG image with a hidden identifying mark. Your original is not replaced. The mark does not stop others from copying or editing the image.",
                 [("in", "Full path to the original image (for example C:\\Pictures\\art.png)"),
                  ("out", "Full path for the NEW marked PNG image"),
                  ("id", "A label you will remember for this submission (for example Company-2026)")],
@@ -76,7 +76,7 @@ internal static class InteractiveMenu
         Console.WriteLine("==============================================");
         Console.WriteLine("What would you like to do?");
         Console.WriteLine();
-        Console.WriteLine("1. Protect an image before sharing it");
+        Console.WriteLine("1. Add a hidden identifying mark to an image");
         Console.WriteLine("2. Check whether an image contains your mark");
         Console.WriteLine("3. Create a record of a C# code file");
         Console.WriteLine("4. Compare two C# code files");
