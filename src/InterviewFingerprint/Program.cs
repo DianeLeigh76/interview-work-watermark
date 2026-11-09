@@ -140,6 +140,21 @@ internal static class Program
         }
     }
 
+    private static FileRecord[] CollectArchiveFileRecords(String fullInput)
+    {
+        return EvidenceFiles.Enumerate(fullInput)
+            .Order(StringComparer.Ordinal)
+            .Select(file =>
+            {
+                // Recheck links around hashing to narrow the replacement window.
+                EvidenceFiles.RejectLinkedAncestors(file);
+                var snapshot = HashFileAndLength(file);
+                EvidenceFiles.RejectLinkedAncestors(file);
+                return new FileRecord(EvidenceFiles.ToManifestPath(fullInput, file),
+                    snapshot.Sha256, snapshot.Bytes);
+            }).ToArray();
+    }
+
     private static void ValidateArchiveInventory(String fullInput, FileRecord[] files)
     {
         HashSet<String> archivedPaths = new HashSet<String>(
@@ -167,17 +182,7 @@ internal static class Program
         // An output path through a linked parent can alias the source tree.
         // Reject it before hashing so the manifest cannot become part of its own evidence.
         EvidenceFiles.RejectLinkedAncestors(Path.GetDirectoryName(fullOutput)!);
-        var files = EvidenceFiles.Enumerate(fullInput)
-            .Order(StringComparer.Ordinal)
-            .Select(file =>
-            {
-                // Narrow the window for a file being swapped to a link after enumeration.
-                EvidenceFiles.RejectLinkedAncestors(file);
-                var snapshot = HashFileAndLength(file);
-                EvidenceFiles.RejectLinkedAncestors(file);
-                return new FileRecord(EvidenceFiles.ToManifestPath(fullInput, file),
-                    snapshot.Sha256, snapshot.Bytes);
-            }).ToArray();
+        FileRecord[] files = CollectArchiveFileRecords(fullInput);
         if (files.Length == 0)
         {
             throw new InvalidDataException("Cannot archive an empty evidence directory.");
