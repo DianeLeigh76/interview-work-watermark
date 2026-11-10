@@ -507,18 +507,14 @@ internal static class Program
         String prefix,
         Boolean isDirectory)
     {
-        if (names.TryGetValue(portableKey, out String? existing))
+        if (names.TryGetValue(portableKey, out String? existing) &&
+            !String.Equals(existing, prefix, StringComparison.Ordinal))
         {
-            if (!String.Equals(existing, prefix, StringComparison.Ordinal))
-            {
-                throw new InvalidDataException(
-                    "Manifest contains case-colliding path segments or Unicode-normalization equivalents.");
-            }
+            throw new InvalidDataException(
+                "Manifest contains case-colliding path segments or Unicode-normalization equivalents.");
         }
-        else
-        {
-            names.Add(portableKey, prefix);
-        }
+
+        names.TryAdd(portableKey, prefix);
 
         if (isDirectory)
         {
