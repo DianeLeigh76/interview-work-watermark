@@ -156,15 +156,26 @@ internal static class InteractiveMenu
                 return value;
             }
 
-            if (name != "strength" ||
-                (Double.TryParse(value, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out Double strength) &&
-                 Double.IsFinite(strength) && strength is >= 8 and <= 60))
+            if (name == "strength")
             {
-                return value;
+                if (Double.TryParse(value, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out Double strength) &&
+                    Double.IsFinite(strength) && strength is >= 8 and <= 60)
+                {
+                    return value;
+                }
+
+                Console.WriteLine("Enter a number from 8 to 60, such as 24, or press Enter for the default.");
+                continue;
             }
 
-            Console.WriteLine("Enter a number from 8 to 60, such as 24, or press Enter for the default.");
+            if (name == "sha256" && (value.Length != 64 || !value.All(Uri.IsHexDigit)))
+            {
+                Console.WriteLine("Enter exactly 64 hexadecimal characters (0-9 or A-F), or press Enter to skip.");
+                continue;
+            }
+
+            return value;
         }
     }
 
