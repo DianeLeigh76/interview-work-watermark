@@ -493,39 +493,50 @@ internal static class Program
                 // Use normalized keys for every prefix, not only complete filenames:
                 // decomposed/composed Unicode directory names may collapse on restore.
                 String portableKey = prefix.Normalize(NormalizationForm.FormC);
-                if (names.TryGetValue(portableKey, out String? existing))
-                {
-                    if (!String.Equals(existing, prefix, StringComparison.Ordinal))
-                    {
-                        throw new InvalidDataException(
-                            "Manifest contains case-colliding path segments or Unicode-normalization equivalents.");
-                    }
-                }
-                else
-                {
-                    names.Add(portableKey, prefix);
-                }
-
-                if (index < segments.Length - 1)
-                {
-                    if (files.Contains(portableKey))
-                    {
-                        throw new InvalidDataException("Manifest path is both a file and a directory.");
-                    }
-
-                    directories.Add(portableKey);
-                }
-                else
-                {
-                    if (directories.Contains(portableKey))
-                    {
-                        throw new InvalidDataException("Manifest path is both a file and a directory.");
-                    }
-
-                    files.Add(portableKey);
-                }
+                ValidatePortablePathPrefix(names, files, directories, portableKey, prefix,
+                    index < segments.Length - 1);
             }
         }
+    }
+
+    private static void ValidatePortablePathPrefix(
+        Dictionary<String, String> names,
+        HashSet<String> files,
+        HashSet<String> directories,
+        String portableKey,
+        String prefix,
+        Boolean isDirectory)
+    {
+        if (names.TryGetValue(portableKey, out String? existing))
+        {
+            if (!String.Equals(existing, prefix, StringComparison.Ordinal))
+            {
+                throw new InvalidDataException(
+                    "Manifest contains case-colliding path segments or Unicode-normalization equivalents.");
+            }
+        }
+        else
+        {
+            names.Add(portableKey, prefix);
+        }
+
+        if (isDirectory)
+        {
+            if (files.Contains(portableKey))
+            {
+                throw new InvalidDataException("Manifest path is both a file and a directory.");
+            }
+
+            directories.Add(portableKey);
+            return;
+        }
+
+        if (directories.Contains(portableKey))
+        {
+            throw new InvalidDataException("Manifest path is both a file and a directory.");
+        }
+
+        files.Add(portableKey);
     }
 
     // Duplicate JSON keys can be interpreted differently by different parsers.
