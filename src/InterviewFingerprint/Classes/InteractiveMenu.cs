@@ -130,7 +130,7 @@ internal static class InteractiveMenu
 
         foreach ((String name, String prompt) in optional)
         {
-            String? value = Ask(prompt, false);
+            String? value = AskOptionalOption(name, prompt);
             if (value is null)
             {
                 return null;
@@ -144,6 +144,28 @@ internal static class InteractiveMenu
         }
 
         return arguments.ToArray();
+    }
+
+    private static String? AskOptionalOption(String name, String prompt)
+    {
+        while (true)
+        {
+            String? value = Ask(prompt, false);
+            if (value is null || value.Length == 0)
+            {
+                return value;
+            }
+
+            if (name != "strength" ||
+                (Double.TryParse(value, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out Double strength) &&
+                 Double.IsFinite(strength) && strength is >= 8 and <= 60))
+            {
+                return value;
+            }
+
+            Console.WriteLine("Enter a number from 8 to 60, such as 24, or press Enter for the default.");
+        }
     }
 
     private static String? Ask(String prompt, Boolean required)
