@@ -633,11 +633,21 @@ internal static class Program
     private static String Required(Dictionary<String, String> options, String name) =>
         options.TryGetValue(name, out var value) && !String.IsNullOrWhiteSpace(value)
             ? value : throw new ArgumentException($"Missing --{name}");
-    private static Double GetStrength(Dictionary<String, String> options) =>
-        options.TryGetValue("strength", out var value) &&
-        Double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) &&
-        parsed is >= 8 and <= 60
-            ? parsed : options.ContainsKey("strength") ? throw new ArgumentException("--strength must be 8..60") : 24;
+    private static Double GetStrength(Dictionary<String, String> options)
+    {
+        if (!options.TryGetValue("strength", out String? value))
+        {
+            return 24;
+        }
+
+        if (!Double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out Double parsed) ||
+            parsed is < 8 or > 60 || Double.IsNaN(parsed))
+        {
+            throw new ArgumentException("--strength must be 8..60");
+        }
+
+        return parsed;
+    }
     private static void CheckDistinct(String a, String b)
     {
         if (Path.GetFullPath(a).Equals(Path.GetFullPath(b), PathComparison))
