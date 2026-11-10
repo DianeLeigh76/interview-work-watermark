@@ -155,12 +155,18 @@ internal static class Program
             }).ToArray();
     }
 
+    private static String[] EnumerateManifestPaths(String root)
+    {
+        return EvidenceFiles.Enumerate(root)
+            .Select(file => EvidenceFiles.ToManifestPath(root, file))
+            .ToArray();
+    }
+
     private static void ValidateArchiveInventory(String fullInput, FileRecord[] files)
     {
         HashSet<String> archivedPaths = new HashSet<String>(
             files.Select(entry => entry.Path), StringComparer.Ordinal);
-        String[] finalArchivePaths = EvidenceFiles.Enumerate(fullInput)
-            .Select(file => EvidenceFiles.ToManifestPath(fullInput, file)).ToArray();
+        String[] finalArchivePaths = EnumerateManifestPaths(fullInput);
         if (!archivedPaths.SetEquals(finalArchivePaths))
         {
             throw new InvalidDataException("Evidence file list changed during archive creation.");
@@ -268,8 +274,7 @@ internal static class Program
 
         // Validate the complete filesystem snapshot, including extra names and
         // links, before printing any successful verification records.
-        String[] actualPaths = EvidenceFiles.Enumerate(root)
-            .Select(file => EvidenceFiles.ToManifestPath(root, file)).ToArray();
+        String[] actualPaths = EnumerateManifestPaths(root);
 
         // Finish every hash check before printing successful records.
         // If a later file throws an I/O or link-validation error, no
@@ -365,8 +370,7 @@ internal static class Program
             ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         HashSet<String> initialPaths = new HashSet<String>(actualPaths, pathComparer);
         HashSet<String> finalPaths = new HashSet<String>(
-            EvidenceFiles.Enumerate(root)
-                .Select(file => EvidenceFiles.ToManifestPath(root, file)), pathComparer);
+            EnumerateManifestPaths(root), pathComparer);
         if (!initialPaths.SetEquals(finalPaths))
         {
             throw new InvalidDataException("Evidence file list changed during verification.");
