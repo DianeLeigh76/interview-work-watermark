@@ -109,8 +109,7 @@ internal static class InteractiveMenu
         Console.WriteLine(explanation);
         if (command is "mark" or "verify")
         {
-            Console.WriteLine("You must set the private IFP_SECRET environment variable before starting this program.");
-            Console.WriteLine("Use the SAME private secret when checking a marked image. Never share it.");
+            ShowImageSecretGuidance();
         }
 
         Console.WriteLine("You can paste a full file or folder path. Surrounding quotes are accepted.");
@@ -144,6 +143,22 @@ internal static class InteractiveMenu
         }
 
         return arguments.ToArray();
+    }
+
+    private static void ShowImageSecretGuidance()
+    {
+        String? secret = Environment.GetEnvironmentVariable("IFP_SECRET");
+        if (String.IsNullOrWhiteSpace(secret) || secret.Length < 16)
+        {
+            Console.WriteLine("A private image-marking secret is not configured.");
+            Console.WriteLine("Before using image marking or checking, set IFP_SECRET to a private value");
+            Console.WriteLine("of at least 16 characters, then restart this program.");
+            Console.WriteLine("Keep a secure copy: you need the same secret to check your marks later.");
+            return;
+        }
+
+        Console.WriteLine("Your private image-marking secret is configured.");
+        Console.WriteLine("Use the SAME secret when checking a marked image. Never share it.");
     }
 
     private static String? AskOptionalOption(String name, String prompt)
