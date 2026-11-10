@@ -545,23 +545,30 @@ internal static class Program
     {
         if (element.ValueKind == JsonValueKind.Object)
         {
-            HashSet<String> names = new HashSet<String>(StringComparer.Ordinal);
-            foreach (JsonProperty property in element.EnumerateObject())
-            {
-                if (!names.Add(property.Name))
-                {
-                    throw new InvalidDataException("Manifest contains duplicate JSON property names.");
-                }
-
-                RejectDuplicateJsonProperties(property.Value);
-            }
+            RejectDuplicateObjectProperties(element);
+            return;
         }
-        else if (element.ValueKind == JsonValueKind.Array)
+
+        if (element.ValueKind == JsonValueKind.Array)
         {
             foreach (JsonElement item in element.EnumerateArray())
             {
                 RejectDuplicateJsonProperties(item);
             }
+        }
+    }
+
+    private static void RejectDuplicateObjectProperties(JsonElement element)
+    {
+        HashSet<String> names = new HashSet<String>(StringComparer.Ordinal);
+        foreach (JsonProperty property in element.EnumerateObject())
+        {
+            if (!names.Add(property.Name))
+            {
+                throw new InvalidDataException("Manifest contains duplicate JSON property names.");
+            }
+
+            RejectDuplicateJsonProperties(property.Value);
         }
     }
 
