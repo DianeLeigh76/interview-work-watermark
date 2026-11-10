@@ -253,19 +253,7 @@ internal static class Program
         // Reject malformed digest arguments before opening an untrusted manifest.
         String? expectedDigest = GetExpectedManifestDigest(options);
 
-        // Manifest input must not be redirected through a symbolic link or junction.
-        EvidenceFiles.RejectLinkedAncestors(manifestFile);
-        // Hash and parse the same manifest bytes, so the supplied digest
-        // cannot be checked against a different file read.
-        Byte[] manifestBytes = ReadManifestBytes(manifestFile);
-        ValidateManifestDigest(manifestBytes, expectedDigest);
-
-        using JsonDocument document = JsonDocument.Parse(manifestBytes);
-        RejectDuplicateJsonProperties(document.RootElement);
-        var manifest = document.RootElement.Deserialize<Manifest>(
-            new JsonSerializerOptions { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
-            ?? throw new InvalidDataException("Invalid manifest.");
-        ValidateManifestSchema(manifest);
+        Manifest manifest = ReadValidatedManifest(manifestFile, expectedDigest);
 
         String root = Path.GetFullPath(input);
         // Reject case-only duplicates even on case-sensitive Unix hosts.
@@ -294,6 +282,22 @@ internal static class Program
         ValidateVerificationInventory(root, actualPaths);
 
         return ReportArchiveResults(results, actualPaths, expected, manifest.Files.Length);
+    }
+
+    private static Manifest ReadValidatedManifest(String manifestFile, String? expectedDigest)
+    {
+        // Reject linked manifest paths and hash exactly the bytes being parsed.
+        EvidenceFiles.RejectLinkedAncestors(manifestFile);
+        Byte[] manifestBytes = ReadManifestBytes(manifestFile);
+        ValidateManifestDigest(manifestBytes, expectedDigest);
+
+        using JsonDocument document = JsonDocument.Parse(manifestBytes);
+        RejectDuplicateJsonProperties(document.RootElement);
+        Manifest manifest = document.RootElement.Deserialize<Manifest>(
+            new JsonSerializerOptions { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
+            ?? throw new InvalidDataException("Invalid manifest.");
+        ValidateManifestSchema(manifest);
+        return manifest;
     }
 
     private static void ValidateManifestSchema(Manifest manifest)
