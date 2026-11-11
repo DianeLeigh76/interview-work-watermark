@@ -395,8 +395,10 @@ internal static class Program
             return ReportVerification(Watermark.Verify(image, payload));
         }
 
+        EvidenceFiles.RejectLinkedAncestors(reference);
         using SKBitmap referenceImage = SKBitmap.Decode(reference)
             ?? throw new InvalidDataException("Unable to decode reference image.");
+        EvidenceFiles.RejectLinkedAncestors(reference);
         return VerifyWithReference(image, referenceImage, payload);
     }
 
