@@ -112,7 +112,7 @@ internal static class InteractiveMenu
             ShowImageSecretGuidance();
         }
 
-        Console.WriteLine("You can paste a full file or folder path. Surrounding quotes are accepted.");
+        Console.WriteLine("You can paste a full file or folder path. Matching single or double quotes are accepted.");
         Console.WriteLine("Enter Q at any prompt to return to the menu.");
         List<String> arguments = [command];
         foreach ((String name, String prompt) in required)
