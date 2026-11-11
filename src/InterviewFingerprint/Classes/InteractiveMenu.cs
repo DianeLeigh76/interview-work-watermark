@@ -194,6 +194,22 @@ internal static class InteractiveMenu
         }
     }
 
+    private static String StripMatchingPathQuotes(String value)
+    {
+        if (value.Length < 2)
+        {
+            return value;
+        }
+
+        Char quote = value[0];
+        if ((quote == '"' || quote == '\'') && value[^1] == quote)
+        {
+            return value[1..^1];
+        }
+
+        return value;
+    }
+
     private static String? Ask(String prompt, Boolean required)
     {
         while (true)
@@ -207,7 +223,7 @@ internal static class InteractiveMenu
                 return null;
             }
 
-            String value = input.Trim().Trim('"');
+            String value = StripMatchingPathQuotes(input.Trim());
             if (required && String.IsNullOrWhiteSpace(value))
             {
                 Console.WriteLine("This information is required. Try again, or enter Q to cancel.");
