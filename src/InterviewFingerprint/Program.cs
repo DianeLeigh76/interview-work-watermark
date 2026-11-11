@@ -294,6 +294,7 @@ internal static class Program
         // Reject linked manifest paths and hash exactly the bytes being parsed.
         EvidenceFiles.RejectLinkedAncestors(manifestFile);
         Byte[] manifestBytes = ReadManifestBytes(manifestFile);
+        EvidenceFiles.RejectLinkedAncestors(manifestFile);
         ValidateManifestDigest(manifestBytes, expectedDigest);
 
         using JsonDocument document = JsonDocument.Parse(manifestBytes);
