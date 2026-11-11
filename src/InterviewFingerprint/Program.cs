@@ -387,6 +387,7 @@ internal static class Program
         EvidenceFiles.RejectLinkedAncestors(input);
         using SKBitmap image = SKBitmap.Decode(input)
             ?? throw new InvalidDataException("Unable to decode suspected image.");
+        EvidenceFiles.RejectLinkedAncestors(input);
         Byte[] payload = Watermark.Payload(Secret(), Required(options, "id"));
 
         if (!options.TryGetValue("reference", out String? reference))
