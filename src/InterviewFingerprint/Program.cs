@@ -349,10 +349,11 @@ internal static class Program
         List<(String Relative, Boolean Matches)> results = new();
         foreach (var item in validated)
         {
+            // Reject dangling links as unsafe evidence, not merely missing files.
+            EvidenceFiles.RejectLinkedAncestors(item.File);
             Boolean matches = false;
             if (File.Exists(item.File))
             {
-                EvidenceFiles.RejectLinkedAncestors(item.File);
                 var snapshot = HashFileAndLength(item.File);
                 EvidenceFiles.RejectLinkedAncestors(item.File);
                 matches = snapshot.Bytes == item.Record.Bytes &&
