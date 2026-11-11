@@ -82,7 +82,9 @@ internal static class Program
         String outputDirectory = Path.GetDirectoryName(Path.GetFullPath(output))!;
         // Do not silently place a marked image through a linked output parent.
         EvidenceFiles.RejectLinkedAncestors(outputDirectory);
+        EvidenceFiles.RejectLinkedAncestors(input);
         using SKBitmap image = SKBitmap.Decode(input) ?? throw new InvalidDataException("Unable to decode input image.");
+        EvidenceFiles.RejectLinkedAncestors(input);
         Watermark.Mark(image, Watermark.Payload(key, id), strength);
         Directory.CreateDirectory(outputDirectory);
         EvidenceFiles.RejectLinkedAncestors(outputDirectory);
