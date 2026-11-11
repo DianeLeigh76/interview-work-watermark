@@ -194,7 +194,7 @@ internal static class InteractiveMenu
         }
     }
 
-    private static String StripMatchingPathQuotes(String value)
+    private static String StripMatchingQuotes(String value)
     {
         if (value.Length < 2)
         {
@@ -223,7 +223,7 @@ internal static class InteractiveMenu
                 return null;
             }
 
-            String value = StripMatchingPathQuotes(input.Trim());
+            String value = StripMatchingQuotes(input.Trim());
             if (required && String.IsNullOrWhiteSpace(value))
             {
                 Console.WriteLine("This information is required. Try again, or enter Q to cancel.");
