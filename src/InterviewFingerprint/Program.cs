@@ -383,7 +383,9 @@ internal static class Program
 
     private static Int32 VerifyImage(Dictionary<String, String> options)
     {
-        using SKBitmap image = SKBitmap.Decode(Required(options, "in"))
+        String input = Required(options, "in");
+        EvidenceFiles.RejectLinkedAncestors(input);
+        using SKBitmap image = SKBitmap.Decode(input)
             ?? throw new InvalidDataException("Unable to decode suspected image.");
         Byte[] payload = Watermark.Payload(Secret(), Required(options, "id"));
 
