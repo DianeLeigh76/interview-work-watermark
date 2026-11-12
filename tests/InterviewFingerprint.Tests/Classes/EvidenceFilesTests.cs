@@ -124,6 +124,21 @@ public sealed class EvidenceFilesTests
     }
 
     [Fact]
+    public void ManifestPathRoundTripsForNestedPortableFile()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String nested = Path.Combine(directory.Root, "folder with spaces", "second");
+        Directory.CreateDirectory(nested);
+        String file = Path.Combine(nested, "sample.multi.part.txt");
+        File.WriteAllText(file, "Synthetic regression fixture.");
+
+        String relative = EvidenceFiles.ToManifestPath(directory.Root, file);
+
+        Assert.Equal("folder with spaces/second/sample.multi.part.txt", relative);
+        Assert.Equal(Path.GetFullPath(file), EvidenceFiles.Resolve(directory.Root, relative));
+    }
+
+    [Fact]
     public void RejectsFilesOutsideEvidenceRoot()
     {
         using TemporaryDirectory directory = new TemporaryDirectory();
