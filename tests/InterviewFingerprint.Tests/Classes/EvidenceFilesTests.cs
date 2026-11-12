@@ -57,6 +57,19 @@ public sealed class EvidenceFilesTests
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Resolve(directory.Root, relative));
     }
 
+    [Theory]
+    [InlineData("ordinary.txt")]
+    [InlineData("nested/multiple.dots.txt")]
+    [InlineData("nested/file with spaces.txt")]
+    public void ResolvesValidPortableManifestPaths(String relative)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String expected = Path.GetFullPath(Path.Combine(directory.Root,
+            relative.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Equal(expected, EvidenceFiles.Resolve(directory.Root, relative));
+    }
+
     [Fact]
     public void RejectsFilesOutsideEvidenceRoot()
     {
