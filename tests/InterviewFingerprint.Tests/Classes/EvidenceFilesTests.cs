@@ -68,6 +68,18 @@ public sealed class EvidenceFilesTests
     }
 
     [Theory]
+    [InlineData("PRN.log")]
+    [InlineData("AUX.txt")]
+    [InlineData("NUL")]
+    [InlineData("CONOUT$.txt")]
+    [InlineData("LPT³.txt")]
+    public void RejectsOtherReservedWindowsDeviceNames(String relative)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Resolve(directory.Root, relative));
+    }
+
+    [Theory]
     [InlineData("ordinary.txt")]
     [InlineData("nested/multiple.dots.txt")]
     [InlineData("nested/file with spaces.txt")]
