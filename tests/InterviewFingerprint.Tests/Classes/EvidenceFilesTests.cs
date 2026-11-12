@@ -45,6 +45,18 @@ public sealed class EvidenceFilesTests
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Resolve(directory.Root, relative));
     }
 
+    [Theory]
+    [InlineData("leading/space .txt")]
+    [InlineData("nested/trailing ")]
+    [InlineData("nested/question?.txt")]
+    [InlineData("nested/star*.txt")]
+    [InlineData("nested/pipe|.txt")]
+    public void RejectsAdditionalNonportableFilenameCharacters(String relative)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Resolve(directory.Root, relative));
+    }
+
     [Fact]
     public void RejectsFilesOutsideEvidenceRoot()
     {
