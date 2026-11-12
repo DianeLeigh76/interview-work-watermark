@@ -83,6 +83,10 @@ public sealed class EvidenceFilesTests
     [InlineData("ordinary.txt")]
     [InlineData("nested/multiple.dots.txt")]
     [InlineData("nested/file with spaces.txt")]
+    [InlineData("COM0.txt")]
+    [InlineData("COM10.txt")]
+    [InlineData("LPT0.txt")]
+    [InlineData("nested/café.txt")]
     public void ResolvesValidPortableManifestPaths(String relative)
     {
         using TemporaryDirectory directory = new TemporaryDirectory();
