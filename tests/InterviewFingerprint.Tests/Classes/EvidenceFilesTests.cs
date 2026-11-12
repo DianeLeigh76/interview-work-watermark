@@ -58,6 +58,16 @@ public sealed class EvidenceFilesTests
     }
 
     [Theory]
+    [InlineData("nested/control\nname.txt")]
+    [InlineData("nested/control\tname.txt")]
+    [InlineData("nested/control\u001fname.txt")]
+    public void RejectsControlCharactersInManifestPaths(String relative)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Resolve(directory.Root, relative));
+    }
+
+    [Theory]
     [InlineData("ordinary.txt")]
     [InlineData("nested/multiple.dots.txt")]
     [InlineData("nested/file with spaces.txt")]
