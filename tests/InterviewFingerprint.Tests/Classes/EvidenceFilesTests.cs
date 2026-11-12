@@ -111,6 +111,18 @@ public sealed class EvidenceFilesTests
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Resolve(directory.Root, relative));
     }
 
+    [Theory]
+    [InlineData("nested//file.txt")]
+    [InlineData("nested/")]
+    [InlineData("nested\\file.txt")]
+    [InlineData("nested:stream.txt")]
+    [InlineData("nested/file.txt:stream")]
+    public void RejectsEmptySegmentsAndPlatformSpecificSeparators(String relative)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Resolve(directory.Root, relative));
+    }
+
     [Fact]
     public void RejectsFilesOutsideEvidenceRoot()
     {
