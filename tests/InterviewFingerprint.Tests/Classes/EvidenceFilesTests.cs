@@ -34,6 +34,17 @@ public sealed class EvidenceFilesTests
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Resolve(directory.Root, relative));
     }
 
+    [Theory]
+    [InlineData("COM1.txt")]
+    [InlineData("LPT9.log")]
+    [InlineData("conin$.txt")]
+    [InlineData("COM¹.txt")]
+    public void RejectsAdditionalWindowsDeviceNames(String relative)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Resolve(directory.Root, relative));
+    }
+
     [Fact]
     public void RejectsFilesOutsideEvidenceRoot()
     {
