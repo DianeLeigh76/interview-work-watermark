@@ -96,6 +96,21 @@ public sealed class EvidenceFilesTests
         Assert.Equal(expected, EvidenceFiles.Resolve(directory.Root, relative));
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(".")]
+    [InlineData("..")]
+    [InlineData("./file.txt")]
+    [InlineData("nested/./file.txt")]
+    [InlineData("nested/../file.txt")]
+    [InlineData("/absolute.txt")]
+    public void RejectsEmptyRootedOrNoncanonicalPaths(String relative)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Resolve(directory.Root, relative));
+    }
+
     [Fact]
     public void RejectsFilesOutsideEvidenceRoot()
     {
