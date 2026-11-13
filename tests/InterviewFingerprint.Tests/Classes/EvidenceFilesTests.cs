@@ -162,6 +162,17 @@ public sealed class EvidenceFilesTests
     }
 
     [Fact]
+    public void RejectsSiblingDirectoryWithMatchingRootPrefix()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String root = Path.Combine(directory.Root, "evidence");
+        String sibling = Path.Combine(directory.Root, "evidence-other", "sample.txt");
+        Directory.CreateDirectory(root);
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.ToManifestPath(root, sibling));
+    }
+
+    [Fact]
     public void RejectsFilesOutsideEvidenceRoot()
     {
         using TemporaryDirectory directory = new TemporaryDirectory();
