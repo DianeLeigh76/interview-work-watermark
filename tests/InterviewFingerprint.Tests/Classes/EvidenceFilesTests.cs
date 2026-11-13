@@ -258,4 +258,21 @@ public sealed class EvidenceFilesTests
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
     }
 
+    [Fact]
+    public void RejectsNestedFileAndDirectoryCaseCollision()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String nested = Path.Combine(directory.Root, "nested");
+        Directory.CreateDirectory(nested);
+        File.WriteAllText(Path.Combine(nested, "Records"), "Synthetic file.");
+        Directory.CreateDirectory(Path.Combine(nested, "records"));
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
+    }
+
 }
