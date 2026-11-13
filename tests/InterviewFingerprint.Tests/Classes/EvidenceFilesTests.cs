@@ -209,4 +209,19 @@ public sealed class EvidenceFilesTests
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
     }
 
+    [Fact]
+    public void RejectsUnicodeNormalizationCollisions()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        File.WriteAllText(Path.Combine(directory.Root, "caf\u00e9.txt"), "Composed filename.");
+        File.WriteAllText(Path.Combine(directory.Root, "cafe\u0301.txt"), "Decomposed filename.");
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
+    }
+
 }
