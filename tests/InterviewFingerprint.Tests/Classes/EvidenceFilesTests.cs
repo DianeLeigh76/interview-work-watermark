@@ -252,8 +252,8 @@ public sealed class EvidenceFilesTests
         using TemporaryDirectory directory = new TemporaryDirectory();
         String nested = Path.Combine(directory.Root, "nested");
         Directory.CreateDirectory(nested);
-        File.WriteAllText(Path.Combine(nested, "caf\\u00e9.txt"), "Composed filename.");
-        File.WriteAllText(Path.Combine(nested, "cafe\\u0301.txt"), "Decomposed filename.");
+        File.WriteAllText(Path.Combine(nested, "caf\u00e9.txt"), "Composed filename.");
+        File.WriteAllText(Path.Combine(nested, "cafe\u0301.txt"), "Decomposed filename.");
 
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
     }
