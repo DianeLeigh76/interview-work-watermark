@@ -138,6 +138,17 @@ public sealed class EvidenceFilesTests
         Assert.Equal(Path.GetFullPath(file), EvidenceFiles.Resolve(directory.Root, relative));
     }
 
+    [Theory]
+    [InlineData("nested/CON.txt")]
+    [InlineData("nested/COM2.log")]
+    [InlineData("nested/LPT1")]
+    [InlineData("nested/aux.backup")]
+    public void RejectsReservedDeviceNamesInsideNestedPaths(String relative)
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Resolve(directory.Root, relative));
+    }
+
     [Fact]
     public void RejectsFilesOutsideEvidenceRoot()
     {
