@@ -179,4 +179,19 @@ public sealed class EvidenceFilesTests
         String outside = Path.Combine(Path.GetTempPath(), "outside-" + Guid.NewGuid().ToString("N"));
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.ToManifestPath(directory.Root, outside));
     }
+    [Fact]
+    public void RejectsCaseCollidingEvidenceFiles()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        File.WriteAllText(Path.Combine(directory.Root, "Report.txt"), "First synthetic file.");
+        File.WriteAllText(Path.Combine(directory.Root, "report.txt"), "Second synthetic file.");
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
+    }
+
 }
