@@ -307,4 +307,20 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsUnicodeNormalizationFileAndDirectoryCollision()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        File.WriteAllText(Path.Combine(directory.Root, "caf\u00e9"), "Synthetic file.");
+        Directory.CreateDirectory(Path.Combine(directory.Root, "cafe\u0301"));
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
+    }
+
+
 }
