@@ -370,4 +370,21 @@ public sealed class EvidenceFilesTests
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(link));
     }
 
+    [Fact]
+    public void RejectsLinkedIntermediateDirectoryDuringResolution()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String target = Path.Combine(directory.Root, "target");
+        Directory.CreateDirectory(target);
+        Directory.CreateSymbolicLink(Path.Combine(directory.Root, "linked"), target);
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.Resolve(directory.Root, "linked/sample.txt"));
+    }
+
 }
