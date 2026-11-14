@@ -387,4 +387,21 @@ public sealed class EvidenceFilesTests
             EvidenceFiles.Resolve(directory.Root, "linked/sample.txt"));
     }
 
+    [Fact]
+    public void RejectsLinkedEvidenceFileDuringResolution()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String target = Path.Combine(directory.Root, "target.txt");
+        File.WriteAllText(target, "Synthetic test content.");
+        File.CreateSymbolicLink(Path.Combine(directory.Root, "linked.txt"), target);
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.Resolve(directory.Root, "linked.txt"));
+    }
+
 }
