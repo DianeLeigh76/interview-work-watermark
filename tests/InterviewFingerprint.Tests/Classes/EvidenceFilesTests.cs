@@ -342,4 +342,15 @@ public sealed class EvidenceFilesTests
             EvidenceFiles.ToManifestPath(directory.Root, parent));
     }
 
+    [Fact]
+    public void ResolvesNestedPortablePathWithoutCreatingFile()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String relative = "future/subfolder/evidence.txt";
+        String expected = Path.Combine(directory.Root, "future", "subfolder", "evidence.txt");
+
+        Assert.Equal(Path.GetFullPath(expected), EvidenceFiles.Resolve(directory.Root, relative));
+        Assert.False(File.Exists(expected));
+    }
+
 }
