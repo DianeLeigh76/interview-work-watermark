@@ -353,4 +353,21 @@ public sealed class EvidenceFilesTests
         Assert.False(File.Exists(expected));
     }
 
+    [Fact]
+    public void RejectsLinkedEvidenceRootDuringEnumeration()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String target = Path.Combine(directory.Root, "target");
+        String link = Path.Combine(directory.Root, "linked");
+        Directory.CreateDirectory(target);
+        Directory.CreateSymbolicLink(link, target);
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(link));
+    }
+
 }
