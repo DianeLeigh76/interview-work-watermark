@@ -323,4 +323,13 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsEvidenceRootItselfAsManifestFile()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(directory.Root, directory.Root));
+    }
+
 }
