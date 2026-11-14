@@ -275,4 +275,20 @@ public sealed class EvidenceFilesTests
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
     }
 
+    [Fact]
+    public void RejectsCaseCollidingDirectories()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        Directory.CreateDirectory(Path.Combine(directory.Root, "Records"));
+        Directory.CreateDirectory(Path.Combine(directory.Root, "records"));
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
+    }
+
+
 }
