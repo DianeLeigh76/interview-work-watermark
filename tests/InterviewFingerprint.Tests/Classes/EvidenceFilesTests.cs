@@ -332,4 +332,14 @@ public sealed class EvidenceFilesTests
             EvidenceFiles.ToManifestPath(directory.Root, directory.Root));
     }
 
+    [Fact]
+    public void RejectsParentDirectoryAsManifestFile()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String parent = Directory.GetParent(directory.Root)!.FullName;
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(directory.Root, parent));
+    }
+
 }
