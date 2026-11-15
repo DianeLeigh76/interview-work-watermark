@@ -525,4 +525,16 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void AllowsNonexistentEvidenceRootInAncestorLinkCheck()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String futureRoot = Path.Combine(directory.Root, "future", "evidence");
+
+        EvidenceFiles.RejectLinkedAncestors(futureRoot);
+
+        Assert.False(Directory.Exists(futureRoot));
+    }
+
+
 }
