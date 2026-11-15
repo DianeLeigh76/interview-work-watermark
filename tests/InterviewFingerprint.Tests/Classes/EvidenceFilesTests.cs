@@ -506,4 +506,23 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsLinkedAncestorOfEvidenceRootDuringEnumeration()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String target = Path.Combine(directory.Root, "target");
+        String link = Path.Combine(directory.Root, "linked-parent");
+        Directory.CreateDirectory(Path.Combine(target, "evidence"));
+        Directory.CreateSymbolicLink(link, target);
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.Enumerate(Path.Combine(link, "evidence")));
+    }
+
+
 }
