@@ -451,4 +451,22 @@ public sealed class EvidenceFilesTests
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
     }
 
+    [Fact]
+    public void RejectsNestedDirectorySymbolicLinkDuringEnumeration()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String nested = Path.Combine(directory.Root, "nested");
+        String target = Path.Combine(directory.Root, "target");
+        Directory.CreateDirectory(nested);
+        Directory.CreateDirectory(target);
+        Directory.CreateSymbolicLink(Path.Combine(nested, "linked"), target);
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
+    }
+
 }
