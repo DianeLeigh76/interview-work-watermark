@@ -469,4 +469,24 @@ public sealed class EvidenceFilesTests
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
     }
 
+    [Fact]
+    public void RejectsLinkedAncestorOfEvidenceRootDuringResolution()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String target = Path.Combine(directory.Root, "target");
+        Directory.CreateDirectory(target);
+        String linkedParent = Path.Combine(directory.Root, "linked-parent");
+        Directory.CreateSymbolicLink(linkedParent, target);
+        String evidenceRoot = Path.Combine(linkedParent, "evidence");
+        Directory.CreateDirectory(evidenceRoot);
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.Resolve(evidenceRoot, "sample.txt"));
+    }
+
 }
