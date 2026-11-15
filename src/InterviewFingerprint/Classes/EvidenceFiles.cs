@@ -123,10 +123,7 @@ internal static class EvidenceFiles
         foreach (String segment in withinRoot.Split(Path.DirectorySeparatorChar))
         {
             current = Path.Combine(current, segment);
-            if (File.Exists(current) || Directory.Exists(current))
-            {
-                RejectLink(current);
-            }
+            RejectLinkIfPresent(current);
         }
 
         return file;
@@ -167,10 +164,7 @@ internal static class EvidenceFiles
         String current = Path.GetFullPath(path);
         while (true)
         {
-            if (File.Exists(current) || Directory.Exists(current))
-            {
-                RejectLink(current);
-            }
+            RejectLinkIfPresent(current);
 
             String? parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(current));
             if (String.IsNullOrEmpty(parent) || parent == current)
@@ -179,6 +173,24 @@ internal static class EvidenceFiles
             }
 
             current = parent;
+        }
+    }
+
+    // Exists() follows links and returns false for dangling symlinks.
+    // Read attributes directly so even a link with a missing target is rejected.
+    private static void RejectLinkIfPresent(String path)
+    {
+        try
+        {
+            RejectLink(path);
+        }
+        catch (FileNotFoundException)
+        {
+            // A not-yet-created evidence destination is permitted.
+        }
+        catch (DirectoryNotFoundException)
+        {
+            // A not-yet-created intermediate directory is permitted.
         }
     }
 
