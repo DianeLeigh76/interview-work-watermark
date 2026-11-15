@@ -436,4 +436,19 @@ public sealed class EvidenceFilesTests
             EvidenceFiles.Resolve(directory.Root, "linked.txt"));
     }
 
+    [Fact]
+    public void RejectsDanglingSymbolicLinkDuringEnumeration()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String link = Path.Combine(directory.Root, "missing-link.txt");
+        File.CreateSymbolicLink(link, Path.Combine(directory.Root, "absent.txt"));
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
+    }
+
 }
