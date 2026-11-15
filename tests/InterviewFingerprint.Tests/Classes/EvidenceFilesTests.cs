@@ -489,4 +489,21 @@ public sealed class EvidenceFilesTests
             EvidenceFiles.Resolve(evidenceRoot, "sample.txt"));
     }
 
+    [Fact]
+    public void RejectsDanglingAncestorOfEvidenceRootDuringEnumeration()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String link = Path.Combine(directory.Root, "dangling-parent");
+        Directory.CreateSymbolicLink(link, Path.Combine(directory.Root, "missing-parent"));
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.Enumerate(Path.Combine(link, "evidence")));
+    }
+
+
 }
