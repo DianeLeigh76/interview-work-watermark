@@ -580,5 +580,21 @@ public sealed class EvidenceFilesTests
         Assert.False(Directory.Exists(futureRoot));
     }
 
+    [Fact]
+    public void EnumeratesEvidenceFilesInOrdinalPathOrder()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        File.WriteAllText(Path.Combine(directory.Root, "zeta.txt"), "Synthetic zeta.");
+        File.WriteAllText(Path.Combine(directory.Root, "alpha.txt"), "Synthetic alpha.");
+        Directory.CreateDirectory(Path.Combine(directory.Root, "nested"));
+        File.WriteAllText(Path.Combine(directory.Root, "nested", "beta.txt"), "Synthetic beta.");
+
+        String[] paths = EvidenceFiles.Enumerate(directory.Root)
+            .Select(file => EvidenceFiles.ToManifestPath(directory.Root, file))
+            .ToArray();
+
+        Assert.Equal(new[] { "alpha.txt", "nested/beta.txt", "zeta.txt" }, paths);
+    }
+
 
 }
