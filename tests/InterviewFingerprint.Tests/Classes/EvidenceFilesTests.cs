@@ -540,6 +540,20 @@ public sealed class EvidenceFilesTests
     }
 
     [Fact]
+    public void RejectsBackslashInEnumeratedEvidenceFilename()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        File.WriteAllText(Path.Combine(directory.Root, @"sample\name.txt"), "Synthetic evidence.");
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
+    }
+
+    [Fact]
     public void AllowsNonexistentEvidenceRootInAncestorLinkCheck()
     {
         using TemporaryDirectory directory = new TemporaryDirectory();
