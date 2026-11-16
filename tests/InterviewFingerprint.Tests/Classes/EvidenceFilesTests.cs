@@ -648,5 +648,20 @@ public sealed class EvidenceFilesTests
 
         Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
     }
+    [Fact]
+    public void RejectsReservedDeviceDirectoryDuringEnumeration()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String nested = Path.Combine(directory.Root, "COM1");
+        Directory.CreateDirectory(nested);
+        File.WriteAllText(Path.Combine(nested, "sample.txt"), "Synthetic evidence.");
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
+    }
 
 }
