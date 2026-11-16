@@ -605,5 +605,23 @@ public sealed class EvidenceFilesTests
         Assert.Empty(EvidenceFiles.Enumerate(directory.Root));
     }
 
+    [Fact]
+    public void EnumeratesDistinctSiblingDirectoriesWithSharedPrefixes()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String first = Path.Combine(directory.Root, "evidence");
+        String second = Path.Combine(directory.Root, "evidence-other");
+        Directory.CreateDirectory(first);
+        Directory.CreateDirectory(second);
+        File.WriteAllText(Path.Combine(first, "one.txt"), "Synthetic first.");
+        File.WriteAllText(Path.Combine(second, "two.txt"), "Synthetic second.");
+
+        String[] paths = EvidenceFiles.Enumerate(directory.Root)
+            .Select(file => EvidenceFiles.ToManifestPath(directory.Root, file))
+            .ToArray();
+
+        Assert.Equal(new[] { "evidence-other/two.txt", "evidence/one.txt" }.OrderBy(value => value, StringComparer.Ordinal), paths);
+    }
+
 
 }
