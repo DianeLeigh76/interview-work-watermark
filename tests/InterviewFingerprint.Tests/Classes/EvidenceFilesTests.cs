@@ -622,6 +622,18 @@ public sealed class EvidenceFilesTests
 
         Assert.Equal(new[] { "evidence-other/two.txt", "evidence/one.txt" }.OrderBy(value => value, StringComparer.Ordinal), paths);
     }
+    [Fact]
+    public void RejectsTrailingDotInEnumeratedEvidenceFilename()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
 
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        File.WriteAllText(Path.Combine(directory.Root, "report."), "Synthetic evidence.");
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
+    }
 
 }
