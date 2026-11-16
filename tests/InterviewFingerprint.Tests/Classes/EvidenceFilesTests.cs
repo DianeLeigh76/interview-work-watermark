@@ -596,5 +596,14 @@ public sealed class EvidenceFilesTests
         Assert.Equal(new[] { "alpha.txt", "nested/beta.txt", "zeta.txt" }, paths);
     }
 
+    [Fact]
+    public void EnumeratesNoFilesFromEmptyNestedDirectories()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        Directory.CreateDirectory(Path.Combine(directory.Root, "empty", "nested"));
+
+        Assert.Empty(EvidenceFiles.Enumerate(directory.Root));
+    }
+
 
 }
