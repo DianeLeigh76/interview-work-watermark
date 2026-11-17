@@ -713,6 +713,25 @@ public sealed class EvidenceFilesTests
     }
 
     [Fact]
+    public void RejectsLinkedEvidenceRootDuringManifestConversion()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String target = Path.Combine(directory.Root, "target");
+        String link = Path.Combine(directory.Root, "linked-root");
+        Directory.CreateDirectory(target);
+        File.WriteAllText(Path.Combine(target, "sample.txt"), "Synthetic evidence.");
+        Directory.CreateSymbolicLink(link, target);
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(link, Path.Combine(link, "sample.txt")));
+    }
+
+    [Fact]
     public void EnumeratesDistinctUnicodeNamesWithoutNormalizationCollision()
     {
         using TemporaryDirectory directory = new TemporaryDirectory();
