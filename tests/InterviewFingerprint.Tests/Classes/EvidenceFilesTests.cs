@@ -694,4 +694,19 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void EnumeratesDistinctUnicodeNamesWithoutNormalizationCollision()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        File.WriteAllText(Path.Combine(directory.Root, "cafe.txt"), "Plain synthetic evidence.");
+        File.WriteAllText(Path.Combine(directory.Root, "café.txt"), "Accented synthetic evidence.");
+
+        String[] paths = EvidenceFiles.Enumerate(directory.Root)
+            .Select(file => EvidenceFiles.ToManifestPath(directory.Root, file))
+            .ToArray();
+
+        Assert.Equal(new[] { "cafe.txt", "café.txt" }, paths);
+    }
+
+
 }
