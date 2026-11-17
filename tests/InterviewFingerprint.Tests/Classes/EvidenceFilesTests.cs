@@ -679,4 +679,19 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsSuperscriptWindowsDeviceNameDuringEnumeration()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        File.WriteAllText(Path.Combine(directory.Root, "COM¹.txt"), "Synthetic evidence.");
+
+        Assert.Throws<InvalidDataException>(() => EvidenceFiles.Enumerate(directory.Root));
+    }
+
+
 }
