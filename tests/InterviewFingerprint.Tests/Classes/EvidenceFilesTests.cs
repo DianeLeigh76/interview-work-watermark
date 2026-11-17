@@ -782,4 +782,24 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsLinkedAncestorOfEvidenceRootDuringManifestConversion()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String target = Path.Combine(directory.Root, "target");
+        Directory.CreateDirectory(Path.Combine(target, "evidence"));
+        String link = Path.Combine(directory.Root, "linked-parent");
+        Directory.CreateSymbolicLink(link, target);
+        String root = Path.Combine(link, "evidence");
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(root, Path.Combine(root, "sample.txt")));
+    }
+
+
 }
