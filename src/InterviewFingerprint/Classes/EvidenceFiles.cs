@@ -60,7 +60,11 @@ internal static class EvidenceFiles
     /// </summary>
     internal static String ToManifestPath(String root, String file)
     {
-        String relative = Path.GetRelativePath(Path.GetFullPath(root), Path.GetFullPath(file));
+        String fullRoot = Path.GetFullPath(root);
+        String fullFile = Path.GetFullPath(file);
+        RejectLinkedAncestors(fullRoot);
+        RejectLinkedAncestors(fullFile);
+        String relative = Path.GetRelativePath(fullRoot, fullFile);
         StringComparison comparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         if (relative == "." || relative == ".." ||
