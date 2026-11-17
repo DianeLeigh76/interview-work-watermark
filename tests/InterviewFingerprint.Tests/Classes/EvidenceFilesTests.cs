@@ -763,4 +763,23 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsLinkedIntermediateDirectoryDuringManifestConversion()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String target = Path.Combine(directory.Root, "target");
+        Directory.CreateDirectory(target);
+        String link = Path.Combine(directory.Root, "linked");
+        Directory.CreateSymbolicLink(link, target);
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(directory.Root, Path.Combine(link, "sample.txt")));
+    }
+
+
 }
