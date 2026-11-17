@@ -746,4 +746,21 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsDanglingLinkedEvidenceFileDuringManifestConversion()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String link = Path.Combine(directory.Root, "dangling.txt");
+        File.CreateSymbolicLink(link, Path.Combine(directory.Root, "missing.txt"));
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(directory.Root, link));
+    }
+
+
 }
