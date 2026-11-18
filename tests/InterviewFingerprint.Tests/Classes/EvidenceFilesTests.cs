@@ -819,4 +819,21 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsColonDuringManifestConversion()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String file = Path.Combine(directory.Root, "report:stream.txt");
+        File.WriteAllText(file, "Synthetic evidence.");
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(directory.Root, file));
+    }
+
+
 }
