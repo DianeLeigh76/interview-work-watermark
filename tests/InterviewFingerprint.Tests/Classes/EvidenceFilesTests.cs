@@ -879,4 +879,20 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsNonportableDirectorySegmentDuringManifestConversion()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String nested = Path.Combine(directory.Root, "bad.", "sample.txt");
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(directory.Root, nested));
+    }
+
+
 }
