@@ -836,4 +836,23 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsReservedDirectoryDuringManifestConversion()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String nested = Path.Combine(directory.Root, "LPT1");
+        Directory.CreateDirectory(nested);
+        String file = Path.Combine(nested, "report.txt");
+        File.WriteAllText(file, "Synthetic evidence.");
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(directory.Root, file));
+    }
+
+
 }
