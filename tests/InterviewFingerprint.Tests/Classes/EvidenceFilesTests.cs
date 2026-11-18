@@ -855,4 +855,16 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsSiblingPrefixPathDuringManifestConversion()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String sibling = directory.Root + "-other";
+        String outside = Path.Combine(sibling, "sample.txt");
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(directory.Root, outside));
+    }
+
+
 }
