@@ -802,4 +802,21 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void RejectsLiteralBackslashDuringManifestConversion()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String file = Path.Combine(directory.Root, @"report\draft.txt");
+        File.WriteAllText(file, "Synthetic evidence.");
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(directory.Root, file));
+    }
+
+
 }
