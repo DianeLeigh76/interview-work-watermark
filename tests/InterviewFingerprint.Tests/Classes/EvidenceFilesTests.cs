@@ -867,4 +867,16 @@ public sealed class EvidenceFilesTests
     }
 
 
+    [Fact]
+    public void ConvertsFutureNestedEvidencePathWithoutCreatingIt()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String future = Path.Combine(directory.Root, "future", "nested", "sample.txt");
+
+        Assert.Equal("future/nested/sample.txt",
+            EvidenceFiles.ToManifestPath(directory.Root, future));
+        Assert.False(File.Exists(future));
+    }
+
+
 }
