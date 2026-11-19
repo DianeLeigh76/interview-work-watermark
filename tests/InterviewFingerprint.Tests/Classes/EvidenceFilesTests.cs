@@ -975,4 +975,22 @@ public sealed class EvidenceFilesTests
             EvidenceFiles.ToManifestPath(directory.Root, file));
     }
 
+    [Fact]
+    public void RejectsDoubleQuoteInNestedManifestConversion()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using TemporaryDirectory directory = new TemporaryDirectory();
+        String nested = Path.Combine(directory.Root, "nested");
+        Directory.CreateDirectory(nested);
+        String file = Path.Combine(nested, "report\"draft.txt");
+        File.WriteAllText(file, "Synthetic evidence.");
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.ToManifestPath(directory.Root, file));
+    }
+
 }
