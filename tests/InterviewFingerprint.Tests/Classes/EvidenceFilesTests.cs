@@ -1009,4 +1009,14 @@ public sealed class EvidenceFilesTests
             EvidenceFiles.ToManifestPath(directory.Root, file));
     }
 
+
+    [Fact]
+    public void RejectsDoubleQuoteDuringManifestResolution()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.Resolve(directory.Root, "nested/report\"draft.txt"));
+    }
+
 }
