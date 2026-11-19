@@ -1019,4 +1019,14 @@ public sealed class EvidenceFilesTests
             EvidenceFiles.Resolve(directory.Root, "nested/report\"draft.txt"));
     }
 
+
+    [Fact]
+    public void RejectsReservedDeviceNameInFutureDirectoryDuringManifestResolution()
+    {
+        using TemporaryDirectory directory = new TemporaryDirectory();
+
+        Assert.Throws<InvalidDataException>(() =>
+            EvidenceFiles.Resolve(directory.Root, "nested/CONOUT$/report.txt"));
+    }
+
 }
