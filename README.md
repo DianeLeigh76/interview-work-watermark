@@ -25,7 +25,7 @@ dotnet run -- check-archive --in "C:\Submissions\EmployerA" --manifest "C:\Evide
 # Optionally add --sha256 followed by the 64-character digest printed by archive.
 ```
 
-Before using `mark` or `verify`, set `IFP_SECRET` to a private random secret of at least 16 characters. Do not use the example placeholders as real secrets. Run `dotnet run --` to see usage.
+Before using `mark` or `verify`, set `IFP_SECRET` to a private random secret of at least 16 characters. Do not use the example placeholders as real secrets. Run `dotnet run --` to open the interactive menu.
 
 For safety, provide secret keys through a restricted input mechanism in a future release; the current CLI's `IFP_SECRET` is read from an environment variable, which can still be exposed to privileged processes. Never commit real secrets or confidential source materials to GitHub.
 
@@ -51,7 +51,7 @@ For safety, provide secret keys through a restricted input mechanism in a future
 
 The optional **local** smoke-test executable can generate `watermark-robustness.json` with `--report`; the report stays on your computer. It runs the keyed detector against **synthetic** gradient and noise images, including unmarked, wrong-ID and wrong-secret controls, JPEG compression (quality 90 and 70), grayscale conversion, cropped images (including unaligned and one-pixel crops) with and without the verified marked-image reference, and 75% resizing with that reference. The report includes matched bits, detection results and marked-image PSNR.
 
-These observations are **diagnostics, not proof of resilience or statistically valid error rates**. Synthetic images cannot estimate real-world false-positive or false-negative rates, and transformation failures do not necessarily fail CI. The untransformed marked PNG and all synthetic negative controls for both image patterns are now required to pass; transformed-image outcomes remain diagnostic. The synthetic report contains no candidate submissions, private artwork or real secrets. Diagnostic reports use exclusive file creation and refuse to overwrite an existing report; choose a new filename for each run. Diagnostic subprocess output is drained concurrently so the 120-second timeout can be enforced even if a child stalls.
+These observations are **diagnostics, not proof of resilience or statistically valid error rates**. Synthetic images cannot estimate real-world false-positive or false-negative rates, and transformation failures do not necessarily fail the local smoke-test run. The untransformed marked PNG and all synthetic negative controls for both image patterns are now required to pass; transformed-image outcomes remain diagnostic. The synthetic report contains no candidate submissions, private artwork or real secrets. Diagnostic reports use exclusive file creation and refuse to overwrite an existing report; choose a new filename for each run. Diagnostic subprocess output is drained concurrently so the 120-second timeout can be enforced even if a child stalls.
 
 ## Architecture / planned roadmap
 
